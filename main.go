@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -129,30 +127,47 @@ func main() {
 		} else if combatRecords[0] == "ENCOUNTER_END" {
 			currentEncounter.End = combatEventTime
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-			currentEncounter = new(Encounter)
-		} else if combatRecords[0] == "UNIT_DIED" {
-			deadUnitName := combatRecords[6]
-			if deadUnitName == currentEncounter.Name {
-				currentEncounter.Kill = true
+			currentEncounter.Kill, err = strconv.ParseBool(combatRecords[5])
+			if err != nil {
+				log.Fatal(err)
 			}
 
+			currentEncounter = new(Encounter)
+		} else if combatRecords[0] == "UNIT_DIED" {
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
 		}
 
-		// if currentEncounter.ID != 0 {
-		// 	currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-		// }
+		if currentEncounter.ID != 0 {
+			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+		}
 	}
 
-	buffer := new(bytes.Buffer)
-	encoder := json.NewEncoder(buffer)
-	encoder.SetIndent("", "\t")
+	// buffer := new(bytes.Buffer)
+	// encoder := json.NewEncoder(buffer)
+	// encoder.SetIndent("", "\t")
 
-	err = encoder.Encode(encounters)
-	if err != nil {
-		log.Fatal(err)
+	// err = encoder.Encode(encounters)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(buffer.String())
+
+	fmt.Println("")
+	for _, encounter := range encounters {
+		encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
+		encounterResult := killOrWipe(encounter.Kill)
+		fmt.Printf("%s of %s lasted %s.\n", encounterResult, encounter.Name, encounterLength)
 	}
-	fmt.Println(buffer.String())
+}
+
+func killOrWipe(k bool) string {
+	switch k {
+	case true:
+		return "Kill"
+	case false:
+		return "Wipe"
+	}
+	return "Unknown"
 }
 
 func parseCombatLogEvent(s string) (dateStamp time.Time, event string, err error) {
