@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +15,10 @@ import (
 )
 
 type CombatLogInfo struct {
-	Version         int  `json:"version"`
-	AdvancedLogging bool `json:"advancedlogging"`
+	Time            time.Time `json:"time"`
+	Version         int       `json:"version"`
+	AdvancedLogging bool      `json:"advancedlogging"`
+	Header          string    `json:"header"`
 }
 
 type Encounter struct {
@@ -45,9 +49,11 @@ var difficulty = map[int]string{
 }
 
 func main() {
-	var encounters []Encounter
-
 	combatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/WoWCombatLog.txt"
+
+	var encounters []Encounter
+	var currentEncounter *Encounter
+
 	combatLogFile, err := os.Open(combatLogFileName)
 	if err != nil {
 		log.Fatal(err)
@@ -58,13 +64,14 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 
 	scanner.Scan()
-	dateTime, combatHeader, _ := parseCombatLogEvent(scanner.Text())
+	combatLogTime, combatLogHeader, _ := parseCombatLogEvent(scanner.Text())
 
 	// Obtain the combat log header
-	combatLogInfo, err := parseCombatLogInfo(combatHeader)
+	combatLogInfo, err := parseCombatLogHeader(combatLogHeader)
 	if err != nil {
 		log.Fatal(err)
 	}
+	combatLogInfo.Time = combatLogTime
 
 	// Validate combat log version and configuration
 	if combatLogInfo.Version != 4 {
@@ -74,62 +81,78 @@ func main() {
 	if combatLogInfo.AdvancedLogging == false {
 		log.Print("You need to enable advanced combat logging for full log usage.")
 	}
-	fmt.Printf("Found valid combat log at %s\n", dateTime)
 
-	var encounter Encounter
 	for scanner.Scan() {
-		combatEventTime, combatEvent, _ := parseCombatLogEvent(scanner.Text())
+		rawCombatEvent := scanner.Text()
+		combatEventTime, combatEvent, _ := parseCombatLogEvent(rawCombatEvent)
+
+		// XXX: ew
+		if currentEncounter == nil {
+			currentEncounter = new(Encounter)
+		}
 
 		r := csv.NewReader(strings.NewReader(combatEvent))
 		r.LazyQuotes = true
-		for {
-			combatRecords, err := r.Read()
-			if err == io.EOF {
-				break
-			}
+		combatRecords, err := r.Read()
+
+		if err != nil {
+			fmt.Println(combatEvent)
+			log.Fatal(err)
+		}
+
+		if combatRecords[0] == "ENCOUNTER_START" {
+			encounters = append(encounters, *new(Encounter))
+			currentEncounter = &encounters[len(encounters)-1]
+
+			encounterID, err := strconv.Atoi(combatRecords[1])
 			if err != nil {
-				fmt.Println(combatEvent)
 				log.Fatal(err)
 			}
 
-			if combatRecords[0] == "ENCOUNTER_START" {
-				encounterID, err := strconv.Atoi(combatRecords[1])
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				difficultyID, err := strconv.Atoi(combatRecords[3])
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				raidSize, err := strconv.Atoi(combatRecords[4])
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				encounter.ID = encounterID
-				encounter.Name = combatRecords[2]
-				encounter.Start = combatEventTime
-				encounter.Difficulty = difficultyID
-				encounter.RaidSize = raidSize
-				encounter.Kill = false
-				encounter.Events = append(encounter.Events, combatEvent)
-			} else if combatRecords[0] == "ENCOUNTER_END" {
-				encounter.End = combatEventTime
-				encounter.Events = append(encounter.Events, combatEvent)
-				encounters = append(encounters, encounter)
-
-				fmt.Println(encounter)
-			} else if combatRecords[0] == "UNIT_DIED" {
-				encounter.Kill = true
-			} else if encounter.Name != "" {
-				encounter.Events = append(encounter.Events, combatEvent)
+			difficultyID, err := strconv.Atoi(combatRecords[3])
+			if err != nil {
+				log.Fatal(err)
 			}
+
+			raidSize, err := strconv.Atoi(combatRecords[4])
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			currentEncounter.ID = encounterID
+			currentEncounter.Name = combatRecords[2]
+			currentEncounter.Start = combatEventTime
+			currentEncounter.Difficulty = difficultyID
+			currentEncounter.RaidSize = raidSize
+			currentEncounter.Kill = false
+			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+		} else if combatRecords[0] == "ENCOUNTER_END" {
+			currentEncounter.End = combatEventTime
+			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+			currentEncounter = new(Encounter)
+		} else if combatRecords[0] == "UNIT_DIED" {
+			deadUnitName := combatRecords[6]
+			if deadUnitName == currentEncounter.Name {
+				currentEncounter.Kill = true
+			}
+
+			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
 		}
+
+		// if currentEncounter.ID != 0 {
+		// 	currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+		// }
 	}
 
-	fmt.Println("All done!")
+	buffer := new(bytes.Buffer)
+	encoder := json.NewEncoder(buffer)
+	encoder.SetIndent("", "\t")
+
+	err = encoder.Encode(encounters)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(buffer.String())
 }
 
 func parseCombatLogEvent(s string) (dateStamp time.Time, event string, err error) {
@@ -145,7 +168,7 @@ func parseCombatLogEvent(s string) (dateStamp time.Time, event string, err error
 	return dateStamp, event, err
 }
 
-func parseCombatLogInfo(s string) (combatLogInfo CombatLogInfo, err error) {
+func parseCombatLogHeader(s string) (combatLogInfo CombatLogInfo, err error) {
 	r := csv.NewReader(strings.NewReader(s))
 
 	for {
