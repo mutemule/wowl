@@ -105,13 +105,11 @@ func main() {
 }
 
 func killOrWipe(k bool) string {
-	switch k {
-	case true:
+	if k {
 		return "Kill"
-	case false:
-		return "Wipe"
 	}
-	return "Unknown"
+
+	return "Wipe"
 }
 
 func parseCombatLogEvent(s string) (dateStamp time.Time, events []string, err error) {
