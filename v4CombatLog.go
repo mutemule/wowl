@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"log"
 	"strconv"
 )
 
@@ -13,11 +14,6 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []Encounter, err error) {
 		combatEventTime, combatRecords, err := parseCombatLogEvent(rawCombatEvent)
 		if err != nil {
 			return encounters, err
-		}
-
-		// XXX: ew
-		if currentEncounter == nil {
-			currentEncounter = new(Encounter)
 		}
 
 		switch combatRecords[0] {
@@ -47,18 +43,24 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []Encounter, err error) {
 			currentEncounter.RaidSize = raidSize
 			currentEncounter.Kill = false
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-		case "ENCOUNTER_END":
-			currentEncounter.End = combatEventTime
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-			currentEncounter.Kill, err = strconv.ParseBool(combatRecords[5])
-			if err != nil {
-				return encounters, err
-			}
 
-			currentEncounter = new(Encounter)
+		case "ENCOUNTER_END":
+			if currentEncounter == nil || currentEncounter.ID == 0 {
+				log.Println("Found an ENCOUNTER_END event without a corresponding ENCOUNTER_START event, ignoring.")
+				log.Println(rawCombatEvent)
+			} else {
+				currentEncounter.End = combatEventTime
+				currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+				currentEncounter.Kill, err = strconv.ParseBool(combatRecords[5])
+				if err != nil {
+					return encounters, err
+				}
+
+				currentEncounter = new(Encounter)
+			}
 		}
 
-		if currentEncounter.ID != 0 {
+		if currentEncounter != nil && currentEncounter.ID != 0 {
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
 		}
 	}
