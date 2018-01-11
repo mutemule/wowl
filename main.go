@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strconv"
@@ -50,7 +49,6 @@ func main() {
 	combatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/WoWCombatLog.txt"
 
 	var encounters []Encounter
-	var currentEncounter *Encounter
 
 	combatLogFile, err := os.Open(combatLogFileName)
 	if err != nil {
@@ -62,10 +60,10 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 
 	scanner.Scan()
-	combatLogTime, combatLogHeader, _ := parseCombatLogEvent(scanner.Text())
+	combatLogTime, combatLogHeaderFields, _ := parseCombatLogEvent(scanner.Text())
 
 	// Obtain the combat log header
-	combatLogInfo, err := parseCombatLogHeader(combatLogHeader)
+	combatLogInfo, err := parseCombatLogHeader(combatLogHeaderFields)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,65 +78,11 @@ func main() {
 		log.Print("You need to enable advanced combat logging for full log usage.")
 	}
 
-	for scanner.Scan() {
-		rawCombatEvent := scanner.Text()
-		combatEventTime, combatEvent, _ := parseCombatLogEvent(rawCombatEvent)
-
-		// XXX: ew
-		if currentEncounter == nil {
-			currentEncounter = new(Encounter)
-		}
-
-		r := csv.NewReader(strings.NewReader(combatEvent))
-		r.LazyQuotes = true
-		combatRecords, err := r.Read()
-
+	switch combatLogInfo.Version {
+	case 4:
+		encounters, err = parsev4CombatLog(scanner)
 		if err != nil {
-			fmt.Println(combatEvent)
 			log.Fatal(err)
-		}
-
-		if combatRecords[0] == "ENCOUNTER_START" {
-			encounters = append(encounters, *new(Encounter))
-			currentEncounter = &encounters[len(encounters)-1]
-
-			encounterID, err := strconv.Atoi(combatRecords[1])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			difficultyID, err := strconv.Atoi(combatRecords[3])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			raidSize, err := strconv.Atoi(combatRecords[4])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			currentEncounter.ID = encounterID
-			currentEncounter.Name = combatRecords[2]
-			currentEncounter.Start = combatEventTime
-			currentEncounter.Difficulty = difficultyID
-			currentEncounter.RaidSize = raidSize
-			currentEncounter.Kill = false
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-		} else if combatRecords[0] == "ENCOUNTER_END" {
-			currentEncounter.End = combatEventTime
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-			currentEncounter.Kill, err = strconv.ParseBool(combatRecords[5])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			currentEncounter = new(Encounter)
-		} else if combatRecords[0] == "UNIT_DIED" {
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-		}
-
-		if currentEncounter.ID != 0 {
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
 		}
 	}
 
@@ -170,48 +114,38 @@ func killOrWipe(k bool) string {
 	return "Unknown"
 }
 
-func parseCombatLogEvent(s string) (dateStamp time.Time, event string, err error) {
+func parseCombatLogEvent(s string) (dateStamp time.Time, events []string, err error) {
 	dateEvent := strings.SplitN(s, "  ", 2)
 	dateTime := dateEvent[0]
-	event = dateEvent[1]
 
 	currentYear := time.Now().Year()
 
 	layout := "1/2 15:04:05.000 2006"
 	dateStamp, err = time.Parse(layout, dateTime+" "+strconv.Itoa(currentYear))
 
-	return dateStamp, event, err
+	r := csv.NewReader(strings.NewReader(dateEvent[1]))
+	events, err = r.Read()
+
+	return dateStamp, events, err
 }
 
-func parseCombatLogHeader(s string) (combatLogInfo CombatLogInfo, err error) {
-	r := csv.NewReader(strings.NewReader(s))
-
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return combatLogInfo, err
-		}
-
-		combatLogVersionString := record[0]
-		if combatLogVersionString != "COMBAT_LOG_VERSION" {
-			// XXX: this should return an error instead
-			log.Fatalf("Expected combat log header, got '%s' instead.", s)
-		}
-		combatLogVersion, err := strconv.Atoi(record[1])
-
-		advancedLoggingString := record[2]
-		if advancedLoggingString != "ADVANCED_LOG_ENABLED" {
-			// XXX: this should return an error instead
-			log.Fatalf("Expected advanced logging indicator, got '%s' instead.", advancedLoggingString)
-		}
-		advancedLogging, err := strconv.ParseBool(record[3])
-
-		combatLogInfo.Version = combatLogVersion
-		combatLogInfo.AdvancedLogging = advancedLogging
+func parseCombatLogHeader(headerFields []string) (combatLogInfo CombatLogInfo, err error) {
+	combatLogVersionField := headerFields[0]
+	if combatLogVersionField != "COMBAT_LOG_VERSION" {
+		// XXX: this should return an error instead
+		log.Fatalf("Expected combat log header, got '%s' instead.", headerFields)
 	}
+	combatLogVersion, err := strconv.Atoi(headerFields[1])
+
+	advancedLoggingField := headerFields[2]
+	if advancedLoggingField != "ADVANCED_LOG_ENABLED" {
+		// XXX: this should return an error instead
+		log.Fatalf("Expected advanced logging indicator, got '%s' instead.", advancedLoggingField)
+	}
+	advancedLogging, err := strconv.ParseBool(headerFields[3])
+
+	combatLogInfo.Version = combatLogVersion
+	combatLogInfo.AdvancedLogging = advancedLogging
 
 	return combatLogInfo, nil
 }
