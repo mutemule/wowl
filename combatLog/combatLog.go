@@ -57,22 +57,24 @@ var Difficulty = map[int]string{
 }
 
 // parseDate takes a CombatLog-formatted datestamp and returns a full time.Time() struct
-func parseDate(s string) (date time.Time, err error) {
+func parseDate(s string) (combatEventDate time.Time, err error) {
 	layout := "1/2 15:04:05.000 2006"
-	currentYear := time.Now().Year()
-	currentMonth := time.Now().Month()
+	currentDate := time.Now()
+	currentYear := currentDate.Year()
 
-	date, err = time.Parse(layout, s+" "+strconv.Itoa(currentYear))
+	combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(currentYear))
 	if err != nil {
-		return date, err
+		return combatEventDate, err
 	}
 
-	if date.Month() > currentMonth {
+	if combatEventDate.After(currentDate) {
 		previousYear := currentYear - 1
-		date, err = time.Parse(layout, s+" "+strconv.Itoa(previousYear))
+		combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(previousYear))
+
+		return combatEventDate, err
 	}
 
-	return date, err
+	return combatEventDate, err
 }
 
 // ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
