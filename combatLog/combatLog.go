@@ -1,4 +1,4 @@
-package main
+package combatLog
 
 import (
 	"encoding/csv"
@@ -8,25 +8,36 @@ import (
 	"time"
 )
 
-type CombatLogInfo struct {
+// Info represents the metadata about the combat log
+type Info struct {
 	Time            time.Time `json:"time"`
 	Version         int       `json:"version"`
 	AdvancedLogging bool      `json:"advancedlogging"`
 	Header          string    `json:"header"`
 }
 
+// Encounter represents all the details about a given encounter
 type Encounter struct {
-	ID         int       `json:"id"`
-	Name       string    `json:"name"`
-	Start      time.Time `json:"start"`
-	End        time.Time `json:"end"`
-	Difficulty int       `json:"difficulty"`
-	RaidSize   int       `json:"raidSize"`
-	Kill       bool      `json:"kill"`
-	Events     []string  `json:"events"`
+	ID           int         `json:"id"`
+	Name         string      `json:"name"`
+	Start        time.Time   `json:"start"`
+	End          time.Time   `json:"end"`
+	DifficultyID int         `json:"difficultyID"`
+	Difficulty   string      `json:"difficulty"`
+	RaidSize     int         `json:"raidSize"`
+	Kill         bool        `json:"kill"`
+	Deaths       []UnitDeath `json:"deaths"`
+	Events       []string    `json:"events"`
 }
 
-var difficulty = map[int]string{
+// UnitDeath records which units died and when
+type UnitDeath struct {
+	Time time.Time `json:"time"`
+	Name string    `json:"name"`
+}
+
+// Difficulty maps the numeric encounter difficulty to plain english
+var Difficulty = map[int]string{
 	0:  "None",
 	1:  "5-player",
 	2:  "5-player Heroic",
@@ -39,10 +50,14 @@ var difficulty = map[int]string{
 	9:  "40-player Raid",
 	11: "Heroic Scenario",
 	12: "Scenario",
-	14: "Raid",
+	14: "Regular",
+	15: "Heroic",
+	16: "Mythic",
+	17: "LFR",
 }
 
-func parseCombatLogEvent(s string) (dateStamp time.Time, events []string, err error) {
+// ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
+func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
 	dateEvent := strings.SplitN(s, "  ", 2)
 	dateTime := dateEvent[0]
 
@@ -52,12 +67,14 @@ func parseCombatLogEvent(s string) (dateStamp time.Time, events []string, err er
 	dateStamp, err = time.Parse(layout, dateTime+" "+strconv.Itoa(currentYear))
 
 	r := csv.NewReader(strings.NewReader(dateEvent[1]))
+	r.LazyQuotes = true
 	events, err = r.Read()
 
 	return dateStamp, events, err
 }
 
-func parseCombatLogHeader(headerFields []string) (combatLogInfo CombatLogInfo, err error) {
+// ParseHeader takes the slice of header events and returns a struct representing prased values
+func ParseHeader(headerFields []string) (combatLogInfo Info, err error) {
 	combatLogVersionField := headerFields[0]
 	if combatLogVersionField != "COMBAT_LOG_VERSION" {
 		// XXX: this should return an error instead

@@ -6,13 +6,15 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"./combatLog"
 )
 
 func main() {
-	combatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/WoWCombatLog.txt"
-	parsedCombatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/WoWCombatLogParsed.txt"
+	combatLogFileName := "WoWCombatLog.txt"
+	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 
-	var encounters []Encounter
+	var encounters []combatLog.Encounter
 
 	combatLogFile, err := os.Open(combatLogFileName)
 	if err != nil {
@@ -22,13 +24,17 @@ func main() {
 
 	scanner := bufio.NewScanner(combatLogFile)
 	scanner.Split(bufio.ScanLines)
-
 	scanner.Scan()
-	combatLogTime, combatLogHeaderFields, _ := parseCombatLogEvent(scanner.Text())
+	combatLogTime, combatLogHeaderFields, err := combatLog.ParseEvent(scanner.Text())
+	if err != nil {
+		log.Printf("Failed to read the combat log header:")
+		log.Fatal(err)
+	}
 
 	// Obtain the combat log header
-	combatLogInfo, err := parseCombatLogHeader(combatLogHeaderFields)
+	combatLogInfo, err := combatLog.ParseHeader(combatLogHeaderFields)
 	if err != nil {
+		log.Printf("Failed to parse the combat log header '%s':", combatLogHeaderFields)
 		log.Fatal(err)
 	}
 	combatLogInfo.Time = combatLogTime
@@ -75,7 +81,11 @@ func main() {
 	for _, encounter := range encounters {
 		encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
 		encounterResult := killOrWipe(encounter.Kill)
-		fmt.Printf("%s of %s lasted %s.\n", encounterResult, encounter.Name, encounterLength)
+		fmt.Printf("%s %s: %s (%s) (%d deaths)\n", encounter.Difficulty, encounter.Name, encounterResult, encounterLength, len(encounter.Deaths))
+		// for _, death := range encounter.Deaths {
+		// 	relativeDeathTime := death.Time.Sub(encounter.Start).Round(1 * time.Second)
+		// 	fmt.Printf("  %s died at %s\n", death.Name, relativeDeathTime)
+		// }
 
 		for _, event := range encounter.Events {
 			_, err = w.WriteString(event + "\n")
@@ -84,9 +94,9 @@ func main() {
 			}
 		}
 	}
-
 }
 
+// XXX: Add some mechanism to detect a reset
 func killOrWipe(k bool) string {
 	if k {
 		return "Kill"

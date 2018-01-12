@@ -4,21 +4,26 @@ import (
 	"bufio"
 	"log"
 	"strconv"
+	"strings"
+
+	"./combatLog"
 )
 
-func parsev4CombatLog(s *bufio.Scanner) (encounters []Encounter, err error) {
-	var currentEncounter *Encounter
+// XXX: this needs to be broken down a bit more
+func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err error) {
+	var currentEncounter *combatLog.Encounter
 
 	for s.Scan() {
 		rawCombatEvent := s.Text()
-		combatEventTime, combatRecords, err := parseCombatLogEvent(rawCombatEvent)
+		combatEventTime, combatRecords, err := combatLog.ParseEvent(rawCombatEvent)
 		if err != nil {
+			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
 			return encounters, err
 		}
 
 		switch combatRecords[0] {
 		case "ENCOUNTER_START":
-			encounters = append(encounters, *new(Encounter))
+			encounters = append(encounters, *new(combatLog.Encounter))
 			currentEncounter = &encounters[len(encounters)-1]
 
 			encounterID, err := strconv.Atoi(combatRecords[1])
@@ -39,7 +44,8 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []Encounter, err error) {
 			currentEncounter.ID = encounterID
 			currentEncounter.Name = combatRecords[2]
 			currentEncounter.Start = combatEventTime
-			currentEncounter.Difficulty = difficultyID
+			currentEncounter.DifficultyID = difficultyID
+			currentEncounter.Difficulty = combatLog.Difficulty[difficultyID]
 			currentEncounter.RaidSize = raidSize
 			currentEncounter.Kill = false
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
@@ -56,7 +62,22 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []Encounter, err error) {
 					return encounters, err
 				}
 
-				currentEncounter = new(Encounter)
+				currentEncounter = new(combatLog.Encounter)
+			}
+
+		case "UNIT_DIED":
+			if currentEncounter != nil && currentEncounter.ID != 0 {
+				unitUUID := combatRecords[5]
+				unitName := combatRecords[6]
+
+				if strings.HasPrefix(unitUUID, "Player-") {
+					playerDeath := combatLog.UnitDeath{
+						Name: unitName,
+						Time: combatEventTime,
+					}
+
+					currentEncounter.Deaths = append(currentEncounter.Deaths, playerDeath)
+				}
 			}
 		}
 
