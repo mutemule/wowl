@@ -4,18 +4,18 @@ import "testing"
 
 func TestKill(t *testing.T) {
 	expectedKill := "Kill"
-	kill := killOrWipe(true)
+	returnedKill := killOrWipe(true)
 
-	if kill != expectedKill {
-		t.Errorf("Expecting %s, but got %s instead.\n", expectedKill, kill)
+	if expectedKill != returnedKill {
+		t.Errorf("Expecting %s, but got %s instead.\n", expectedKill, returnedKill)
 	}
 }
 
 func TestWipe(t *testing.T) {
 	expectedWipe := "Wipe"
-	wipe := killOrWipe(false)
+	returnedWipe := killOrWipe(false)
 
-	if wipe != expectedWipe {
-		t.Errorf("Expecting %s, but got %s instead.\n", expectedWipe, wipe)
+	if expectedWipe != returnedWipe {
+		t.Errorf("Expecting %s, but got %s instead.\n", expectedWipe, returnedWipe)
 	}
 }
