@@ -56,15 +56,31 @@ var Difficulty = map[int]string{
 	17: "LFR",
 }
 
+// parseDate takes a CombatLog-formatted datestamp and returns a full time.Time() struct
+func parseDate(s string) (date time.Time, err error) {
+	layout := "1/2 15:04:05.000 2006"
+	currentYear := time.Now().Year()
+	currentMonth := time.Now().Month()
+
+	date, err = time.Parse(layout, s+" "+strconv.Itoa(currentYear))
+	if err != nil {
+		return date, err
+	}
+
+	if date.Month() > currentMonth {
+		previousYear := currentYear - 1
+		date, err = time.Parse(layout, s+" "+strconv.Itoa(previousYear))
+	}
+
+	return date, err
+}
+
 // ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
 func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
 	dateEvent := strings.SplitN(s, "  ", 2)
 	dateTime := dateEvent[0]
 
-	currentYear := time.Now().Year()
-
-	layout := "1/2 15:04:05.000 2006"
-	dateStamp, err = time.Parse(layout, dateTime+" "+strconv.Itoa(currentYear))
+	dateStamp, _ = parseDate(dateTime)
 
 	r := csv.NewReader(strings.NewReader(dateEvent[1]))
 	r.LazyQuotes = true
