@@ -2,6 +2,7 @@ package combatLog
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -67,5 +68,29 @@ func TestParsingEmbeddedQuoteInCombatEvent(t *testing.T) {
 
 	if expectedNumberOfEvents != len(returnedEvents) {
 		t.Errorf("Event parsing failed: expected %d fields, but got %d.\n", expectedNumberOfEvents, len(returnedEvents))
+	}
+}
+
+func TestParsingValidHeader(t *testing.T) {
+	expectedHeader := Info{
+		Time:            time.Now().UTC(),
+		Version:         4,
+		AdvancedLogging: true,
+		Header:          "",
+	}
+	header := make([]string, 4)
+	header[0] = "COMBAT_LOG_VERSION"
+	header[1] = strconv.Itoa(expectedHeader.Version)
+	header[2] = "ADVANCED_LOG_ENABLED"
+	header[3] = "1"
+
+	returnedHeader, _ := ParseHeader(header)
+
+	if expectedHeader.Version != returnedHeader.Version {
+		t.Errorf("Header parsing failed: expected verion %d, but got version %d\n", expectedHeader.Version, returnedHeader.Version)
+	}
+
+	if expectedHeader.AdvancedLogging != returnedHeader.AdvancedLogging {
+		t.Errorf("Header parsing failed: advanced logging should be %v, but got %v\n", expectedHeader.AdvancedLogging, returnedHeader.AdvancedLogging)
 	}
 }
