@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"./combatLog"
+	"./combatLog/generic"
 )
 
 func main() {
 	combatLogFileName := "WoWCombatLog.txt"
 	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 
-	var encounters []combatLog.Encounter
+	var encounters []generic.Encounter
 
 	combatLogFile, err := os.Open(combatLogFileName)
 	if err != nil {
@@ -48,13 +49,7 @@ func main() {
 		log.Print("You need to enable advanced combat logging for full log usage.")
 	}
 
-	switch combatLogInfo.Version {
-	case 4:
-		encounters, err = parsev4CombatLog(scanner)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	encounters, err = combatLog.Parse(combatLogInfo, scanner)
 
 	// buffer := new(bytes.Buffer)
 	// encoder := json.NewEncoder(buffer)

@@ -1,4 +1,4 @@
-package main
+package v4
 
 import (
 	"bufio"
@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"strings"
 
-	"./combatLog"
+	"../generic"
 )
 
-// XXX: this needs to be broken down a bit more
-func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err error) {
-	var currentEncounter *combatLog.Encounter
+// Parsev4CombatLog XXX: this needs to be broken down a bit more
+func Parsev4CombatLog(s *bufio.Scanner) (encounters []generic.Encounter, err error) {
+	var currentEncounter *generic.Encounter
 
 	for s.Scan() {
 		rawCombatEvent := s.Text()
-		combatEventTime, combatRecords, err := combatLog.ParseEvent(rawCombatEvent)
+		combatEventTime, combatRecords, err := generic.ParseEvent(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
 			return encounters, err
@@ -23,7 +23,7 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err e
 
 		switch combatRecords[0] {
 		case "ENCOUNTER_START":
-			encounters = append(encounters, *new(combatLog.Encounter))
+			encounters = append(encounters, *new(generic.Encounter))
 			currentEncounter = &encounters[len(encounters)-1]
 
 			encounterID, err := strconv.Atoi(combatRecords[1])
@@ -45,7 +45,7 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err e
 			currentEncounter.Name = combatRecords[2]
 			currentEncounter.Start = combatEventTime
 			currentEncounter.DifficultyID = difficultyID
-			currentEncounter.Difficulty = combatLog.Difficulty[difficultyID]
+			currentEncounter.Difficulty = generic.Difficulty[difficultyID]
 			currentEncounter.RaidSize = raidSize
 			currentEncounter.Kill = false
 			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
@@ -62,7 +62,7 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err e
 					return encounters, err
 				}
 
-				currentEncounter = new(combatLog.Encounter)
+				currentEncounter = new(generic.Encounter)
 			}
 
 		case "UNIT_DIED":
@@ -71,7 +71,7 @@ func parsev4CombatLog(s *bufio.Scanner) (encounters []combatLog.Encounter, err e
 				unitName := combatRecords[6]
 
 				if strings.HasPrefix(unitUUID, "Player-") {
-					playerDeath := combatLog.UnitDeath{
+					playerDeath := generic.UnitDeath{
 						Name: unitName,
 						Time: combatEventTime,
 					}

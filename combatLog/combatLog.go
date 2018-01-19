@@ -1,90 +1,24 @@
 package combatLog
 
 import (
+	"bufio"
 	"log"
 	"strconv"
 	"time"
 
 	"./generic"
+	"./v4"
 )
-
-// Info represents the metadata about the combat log
-type Info struct {
-	Time            time.Time `json:"time"`
-	Version         int       `json:"version"`
-	AdvancedLogging bool      `json:"advancedlogging"`
-	Header          string    `json:"header"`
-}
-
-// Encounter represents all the details about a given encounter
-type Encounter struct {
-	ID           int         `json:"id"`
-	Name         string      `json:"name"`
-	Start        time.Time   `json:"start"`
-	End          time.Time   `json:"end"`
-	DifficultyID int         `json:"difficultyID"`
-	Difficulty   string      `json:"difficulty"`
-	RaidSize     int         `json:"raidSize"`
-	Kill         bool        `json:"kill"`
-	Deaths       []UnitDeath `json:"deaths"`
-	Events       []string    `json:"events"`
-}
-
-// UnitDeath records which units died and when
-type UnitDeath struct {
-	Time time.Time `json:"time"`
-	Name string    `json:"name"`
-}
-
-// Difficulty maps the numeric encounter difficulty to plain english
-var Difficulty = map[int]string{
-	0:  "None",
-	1:  "5-player",
-	2:  "5-player Heroic",
-	3:  "10-player Raid",
-	4:  "25-player Raid",
-	5:  "10-player Heroic Raid",
-	6:  "25-player Heroic Raid",
-	7:  "LFR",
-	8:  "Challenge Mode",
-	9:  "40-player Raid",
-	11: "Heroic Scenario",
-	12: "Scenario",
-	14: "Regular",
-	15: "Heroic",
-	16: "Mythic",
-	17: "LFR",
-}
-
-// parseDate takes a CombatLog-formatted datestamp and returns a full time.Time() struct
-func parseDate(s string) (combatEventDate time.Time, err error) {
-	layout := "1/2 15:04:05.000 2006"
-	currentDate := time.Now()
-	currentYear := currentDate.Year()
-
-	combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(currentYear))
-	if err != nil {
-		return combatEventDate, err
-	}
-
-	if combatEventDate.After(currentDate) {
-		previousYear := currentYear - 1
-		combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(previousYear))
-
-		return combatEventDate, err
-	}
-
-	return combatEventDate, err
-}
 
 // ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
 func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
 	dateStamp, events, err = generic.ParseEvent(s)
+
 	return dateStamp, events, err
 }
 
 // ParseHeader takes the slice of header events and returns a struct representing prased values
-func ParseHeader(headerFields []string) (combatLogInfo Info, err error) {
+func ParseHeader(headerFields []string) (combatLogInfo generic.Info, err error) {
 	combatLogVersionField := headerFields[0]
 	if combatLogVersionField != "COMBAT_LOG_VERSION" {
 		// XXX: this should return an error instead
@@ -103,4 +37,16 @@ func ParseHeader(headerFields []string) (combatLogInfo Info, err error) {
 	combatLogInfo.AdvancedLogging = advancedLogging
 
 	return combatLogInfo, nil
+}
+
+func Parse(combatLogInfo generic.Info, s *bufio.Scanner) (encounters []generic.Encounter, err error) {
+	switch combatLogInfo.Version {
+	case 4:
+		encounters, err = v4.Parsev4CombatLog(s)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return encounters, err
 }
