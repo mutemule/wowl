@@ -1,11 +1,11 @@
 package combatLog
 
 import (
-	"encoding/csv"
 	"log"
 	"strconv"
-	"strings"
 	"time"
+
+	"./generic"
 )
 
 // Info represents the metadata about the combat log
@@ -79,15 +79,7 @@ func parseDate(s string) (combatEventDate time.Time, err error) {
 
 // ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
 func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
-	dateEvent := strings.SplitN(s, "  ", 2)
-	dateTime := dateEvent[0]
-
-	dateStamp, _ = parseDate(dateTime)
-
-	r := csv.NewReader(strings.NewReader(dateEvent[1]))
-	r.LazyQuotes = true
-	events, err = r.Read()
-
+	dateStamp, events, err = generic.ParseEvent(s)
 	return dateStamp, events, err
 }
 
