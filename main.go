@@ -7,15 +7,15 @@ import (
 	"os"
 	"time"
 
+	"./combat"
 	"./combatLog"
-	"./combatLog/generic"
 )
 
 func main() {
 	combatLogFileName := "WoWCombatLog.txt"
 	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 
-	var encounters []generic.Encounter
+	var encounters []combat.Encounter
 
 	combatLogFile, err := os.Open(combatLogFileName)
 	if err != nil {
