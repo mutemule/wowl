@@ -27,29 +27,7 @@ func Parsev4CombatLog(s *bufio.Scanner) (encounters []combat.Encounter, err erro
 			encounters = append(encounters, *new(combat.Encounter))
 			currentEncounter = &encounters[len(encounters)-1]
 
-			encounterID, err := strconv.Atoi(combatRecords[1])
-			if err != nil {
-				return encounters, err
-			}
-
-			difficultyID, err := strconv.Atoi(combatRecords[3])
-			if err != nil {
-				return encounters, err
-			}
-
-			raidSize, err := strconv.Atoi(combatRecords[4])
-			if err != nil {
-				return encounters, err
-			}
-
-			currentEncounter.ID = encounterID
-			currentEncounter.Name = combatRecords[2]
-			currentEncounter.Start = combatEventTime
-			currentEncounter.DifficultyID = difficultyID
-			currentEncounter.Difficulty = combat.Difficulty[difficultyID]
-			currentEncounter.RaidSize = raidSize
-			currentEncounter.Kill = false
-			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+			*currentEncounter, err = parseEncounterStart(rawCombatEvent)
 
 		case "ENCOUNTER_END":
 			if currentEncounter == nil || currentEncounter.ID == 0 {
@@ -88,4 +66,32 @@ func Parsev4CombatLog(s *bufio.Scanner) (encounters []combat.Encounter, err erro
 	}
 
 	return encounters, err
+}
+
+func parseEncounterStart(combatEvent string) (encounter combat.Encounter, err error) {
+	time, records, err := commonEvent.ParseEvent(combatEvent)
+
+	encounter.Start = time
+	encounter.Kill = false
+	encounter.Events = append(encounter.Events, combatEvent)
+
+	encounter.ID, err = strconv.Atoi(records[1])
+	if err != nil {
+		return encounter, err
+	}
+
+	encounter.Name = records[2]
+
+	encounter.DifficultyID, err = strconv.Atoi(records[3])
+	if err != nil {
+		return encounter, err
+	}
+	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
+
+	encounter.RaidSize, err = strconv.Atoi(records[4])
+	if err != nil {
+		return encounter, err
+	}
+
+	return encounter, err
 }

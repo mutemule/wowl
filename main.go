@@ -7,59 +7,27 @@ import (
 	"os"
 	"time"
 
-	"./combat"
 	"./combatLog"
 )
 
 func main() {
 	combatLogFileName := "WoWCombatLog.txt"
+	// combatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/warcraftlogsarchive/WoWCombatLog-archive-2018-01-22T06-33-42.964Z.txt"
 	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 
-	var encounters []combat.Encounter
+	info, encounters, err := combatLog.Parse(combatLogFileName)
 
-	combatLogFile, err := os.Open(combatLogFileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer combatLogFile.Close()
+	// if debug {
+	//   buffer := new(bytes.Buffer)
+	//   encoder := json.NewEncoder(buffer)
+	//   encoder.SetIndent("", "\t")
 
-	scanner := bufio.NewScanner(combatLogFile)
-	scanner.Split(bufio.ScanLines)
-	scanner.Scan()
-	combatLogTime, combatLogHeaderFields, err := combatLog.ParseEvent(scanner.Text())
-	if err != nil {
-		log.Printf("Failed to read the combat log header:")
-		log.Fatal(err)
-	}
-
-	// Obtain the combat log header
-	combatLogInfo, err := combatLog.ParseHeader(combatLogHeaderFields)
-	if err != nil {
-		log.Printf("Failed to parse the combat log header '%s':", combatLogHeaderFields)
-		log.Fatal(err)
-	}
-	combatLogInfo.Time = combatLogTime
-
-	// Validate combat log version and configuration
-	if combatLogInfo.Version != 4 {
-		log.Fatalf("Unsupported combat log version: %d", combatLogInfo.Version)
-	}
-
-	if combatLogInfo.AdvancedLogging == false {
-		log.Print("You need to enable advanced combat logging for full log usage.")
-	}
-
-	encounters, err = combatLog.Parse(combatLogInfo, scanner)
-
-	// buffer := new(bytes.Buffer)
-	// encoder := json.NewEncoder(buffer)
-	// encoder.SetIndent("", "\t")
-
-	// err = encoder.Encode(encounters)
-	// if err != nil {
-	// 	log.Fatal(err)
+	//   err = encoder.Encode(encounters)
+	//   if err != nil {
+	//  	log.Fatal(err)
+	//   }
+	//   fmt.Println(buffer.String())
 	// }
-	// fmt.Println(buffer.String())
 
 	fh, err := os.Create(parsedCombatLogFileName)
 	if err != nil {
@@ -68,7 +36,7 @@ func main() {
 	w := bufio.NewWriter(fh)
 	defer fh.Close()
 
-	_, err = w.WriteString(combatLogInfo.Header + "\n")
+	_, err = w.WriteString(info.Header + "\n")
 	if err != nil {
 		log.Printf("Failed to write combat log header: %s", err)
 	}

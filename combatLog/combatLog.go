@@ -2,36 +2,81 @@ package combatLog
 
 import (
 	"bufio"
+	"fmt"
 	"log"
-	"time"
+	"os"
+	"strconv"
 
 	"../combat"
 	"./commonEvent"
 	"./v4Event"
 )
 
-// ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
-func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
-	dateStamp, events, err = commonEvent.ParseEvent(s)
+// Parse will parse the full combat log and return the appropriate metadata and encounters
+func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounter, err error) {
+	combatLogFileHandle, err := os.Open(combatLogFile)
+	if err != nil {
+		return info, encounters, err
+	}
+	defer combatLogFileHandle.Close()
 
-	return dateStamp, events, err
-}
+	scanner := bufio.NewScanner(combatLogFileHandle)
+	scanner.Split(bufio.ScanLines)
+	scanner.Scan()
+	combatTime, logHeaderFields, err := commonEvent.ParseEvent(scanner.Text())
+	if err != nil {
+		return info, encounters, err
+	}
 
-// ParseHeader takes the slice of header events and returns a struct representing prased values
-func ParseHeader(headerFields []string) (combatLogInfo combat.Info, err error) {
-	combatLogInfo, err = commonEvent.ParseHeader(headerFields)
+	// Obtain the combat log header
+	combatInfo, err := parseHeader(logHeaderFields)
+	if err != nil {
+		log.Printf("Failed to parse the combat log header '%s':", logHeaderFields)
+		log.Fatal(err)
+	}
+	combatInfo.Time = combatTime
 
-	return combatLogInfo, nil
-}
+	// Validate combat log version and configuration, should be its own function
+	if combatInfo.Version != 4 {
+		log.Fatalf("Unsupported combat log version: %d", combatInfo.Version)
+	}
 
-func Parse(combatLogInfo combat.Info, s *bufio.Scanner) (encounters []combat.Encounter, err error) {
-	switch combatLogInfo.Version {
+	// The logs are only really useful if advanced logging is enabled
+	if combatInfo.AdvancedLogging == false {
+		log.Print("You need to enable advanced combat logging for full log usage.")
+	}
+
+	switch combatInfo.Version {
 	case 4:
-		encounters, err = v4Event.Parsev4CombatLog(s)
+		// XXX: stop passing the scanner around and just parse individual events
+		// This will be more than a little tricky, but should be doable
+		encounters, err = v4Event.Parsev4CombatLog(scanner)
 		if err != nil {
-			log.Fatal(err)
+			return info, encounters, err
 		}
 	}
 
-	return encounters, err
+	return info, encounters, err
+}
+
+// parseHeader takes the slice of header events and returns a struct representing prased values
+func parseHeader(headerFields []string) (combatInfo combat.Info, err error) {
+	versionField := headerFields[0]
+	if versionField != "COMBAT_LOG_VERSION" {
+		err = fmt.Errorf("combatLog: Expected to find COMBAT_LOG_VERSION, found %s instead", versionField)
+		return combatInfo, err
+	}
+	version, err := strconv.Atoi(headerFields[1])
+
+	advancedLoggingField := headerFields[2]
+	if advancedLoggingField != "ADVANCED_LOG_ENABLED" {
+		err = fmt.Errorf("combatLog: Expected to find ADVANCED_LOG_ENABLED, found %s instead", advancedLoggingField)
+		return combatInfo, err
+	}
+	advancedLogging, err := strconv.ParseBool(headerFields[3])
+
+	combatInfo.Version = version
+	combatInfo.AdvancedLogging = advancedLogging
+
+	return combatInfo, nil
 }
