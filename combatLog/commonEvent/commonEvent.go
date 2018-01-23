@@ -2,12 +2,9 @@ package commonEvent
 
 import (
 	"encoding/csv"
-	"log"
 	"strconv"
 	"strings"
 	"time"
-
-	"../../combat"
 )
 
 // ParseEvent takes a single combat log event and returns the datestampe along with a slice of event fields
@@ -22,28 +19,6 @@ func ParseEvent(s string) (dateStamp time.Time, events []string, err error) {
 	events, err = r.Read()
 
 	return dateStamp, events, err
-}
-
-// ParseHeader takes the slice of header events and returns a struct representing prased values
-func ParseHeader(headerFields []string) (combatLogInfo combat.Info, err error) {
-	combatLogVersionField := headerFields[0]
-	if combatLogVersionField != "COMBAT_LOG_VERSION" {
-		// XXX: this should return an error instead
-		log.Fatalf("Expected combat log header, got '%s' instead.", headerFields)
-	}
-	combatLogVersion, err := strconv.Atoi(headerFields[1])
-
-	advancedLoggingField := headerFields[2]
-	if advancedLoggingField != "ADVANCED_LOG_ENABLED" {
-		// XXX: this should return an error instead
-		log.Fatalf("Expected advanced logging indicator, got '%s' instead.", advancedLoggingField)
-	}
-	advancedLogging, err := strconv.ParseBool(headerFields[3])
-
-	combatLogInfo.Version = combatLogVersion
-	combatLogInfo.AdvancedLogging = advancedLogging
-
-	return combatLogInfo, nil
 }
 
 // parseDate takes a CombatLog-formatted datestamp and returns a full time.Time() struct

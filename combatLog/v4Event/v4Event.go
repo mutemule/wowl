@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"../../combat"
-	"../commonEvent"
+	"github.com/mutemule/wowl/combat"
+	"github.com/mutemule/wowl/combatLog/commonEvent"
 )
 
 // Parsev4CombatLog XXX: this needs to be broken down a bit more

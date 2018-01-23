@@ -7,9 +7,9 @@ import (
 	"os"
 	"strconv"
 
-	"../combat"
-	"./commonEvent"
-	"./v4Event"
+	"github.com/mutemule/wowl/combat"
+	"github.com/mutemule/wowl/combatLog/commonEvent"
+	"github.com/mutemule/wowl/combatLog/v4Event"
 )
 
 // Parse will parse the full combat log and return the appropriate metadata and encounters

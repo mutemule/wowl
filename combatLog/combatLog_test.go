@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"../combat"
+	"github.com/mutemule/wowl/combat"
 )
 
 func TestParsingValidHeader(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"./combatLog"
+	"github.com/mutemule/wowl/combatLog"
 )
 
 func main() {
