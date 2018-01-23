@@ -1,6 +1,10 @@
+# wowl [![Travis CI Status](https://travis-ci.org/mutemule/wowl.svg?branch=master)](https://travis-ci.org/mutemule/wowl)&nbsp;[![Coverage Status](https://coveralls.io/repos/mutemule/wowl/badge.png?branch=master)](https://coveralls.io/r/mutemule/wowl)
+
 ## Synopsis
 
-Just playing around with parsing the World of Warcraft Combat Log stuff in here for now.
+A quick World of Warcraft combat log parser.
+
+Right now, this is not useful to you whatsoever. Things are still changing pretty quickly, so a full writeup is pending.
 
 ## Further Reading
 
