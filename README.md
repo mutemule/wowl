@@ -1,10 +1,9 @@
-# wowl [![Travis CI Status](https://travis-ci.org/mutemule/wowl.svg?branch=master)](https://travis-ci.org/mutemule/wowl)&nbsp;[![Coverage Status](https://coveralls.io/repos/mutemule/wowl/badge.png?branch=master)](https://coveralls.io/r/mutemule/wowl)
-
-## Synopsis
+# wowl
+[![Travis CI Status](https://travis-ci.org/mutemule/wowl.svg?branch=master)](https://travis-ci.org/mutemule/wowl)&nbsp;[![Coverage Status](https://coveralls.io/repos/github/mutemule/wowl/badge.svg?branch=master)](https://coveralls.io/github/mutemule/wowl?branch=master)
 
 A quick World of Warcraft combat log parser.
 
-Right now, this is not useful to you whatsoever. Things are still changing pretty quickly, so a full writeup is pending.
+Right now, this is not useful to you whatsoever. Things are still changing pretty quickly, and it's uncertain just how far this thing will go.
 
 ## Further Reading
 
