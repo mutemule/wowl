@@ -9,7 +9,7 @@ func TestParsingValidCombatStart(t *testing.T) {
 	expectedRaidSize := 25
 	combatStartEvent := "1/21 20:43:48.614  ENCOUNTER_START,2064,\"Portal Keeper Hasabel\",17,25"
 
-	encounter, err := parseEncounterStart(combatStartEvent)
+	encounter, err := startEncounter(combatStartEvent)
 	if err != nil {
 		t.Errorf("Failed to parse a valid combat start event: %s", err)
 	}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/mutemule/wowl/combat"
 	"github.com/mutemule/wowl/combatLog/event"
-	"github.com/mutemule/wowl/combatLog/v4Event"
+	"github.com/mutemule/wowl/combatLog/v4"
 )
 
 // Parse will parse the full combat log and return the appropriate metadata and encounters
@@ -50,7 +50,7 @@ func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounte
 	case 4:
 		// XXX: stop passing the scanner around and just parse individual events
 		// This will be more than a little tricky, but should be doable
-		encounters, err = v4Event.Parsev4CombatLog(scanner)
+		encounters, err = v4.Parse(scanner)
 		if err != nil {
 			return info, encounters, err
 		}
