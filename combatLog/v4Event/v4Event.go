@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/mutemule/wowl/combat"
-	"github.com/mutemule/wowl/combatLog/commonEvent"
+	"github.com/mutemule/wowl/combatLog/event"
 )
 
 // Parsev4CombatLog XXX: this needs to be broken down a bit more
@@ -16,7 +16,7 @@ func Parsev4CombatLog(s *bufio.Scanner) (encounters []combat.Encounter, err erro
 
 	for s.Scan() {
 		rawCombatEvent := s.Text()
-		combatEventTime, combatRecords, err := commonEvent.ParseEvent(rawCombatEvent)
+		combatEventTime, combatRecords, err := event.Split(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
 			return encounters, err
@@ -69,7 +69,7 @@ func Parsev4CombatLog(s *bufio.Scanner) (encounters []combat.Encounter, err erro
 }
 
 func parseEncounterStart(combatEvent string) (encounter combat.Encounter, err error) {
-	time, records, err := commonEvent.ParseEvent(combatEvent)
+	time, records, err := event.Split(combatEvent)
 
 	encounter.Start = time
 	encounter.Kill = false

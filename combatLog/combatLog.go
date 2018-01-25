@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/mutemule/wowl/combat"
-	"github.com/mutemule/wowl/combatLog/commonEvent"
+	"github.com/mutemule/wowl/combatLog/event"
 	"github.com/mutemule/wowl/combatLog/v4Event"
 )
 
@@ -23,7 +23,7 @@ func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounte
 	scanner := bufio.NewScanner(combatLogFileHandle)
 	scanner.Split(bufio.ScanLines)
 	scanner.Scan()
-	combatTime, logHeaderFields, err := commonEvent.ParseEvent(scanner.Text())
+	combatTime, logHeaderFields, err := event.Split(scanner.Text())
 	if err != nil {
 		return info, encounters, err
 	}
