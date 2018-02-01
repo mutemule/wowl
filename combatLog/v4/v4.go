@@ -2,9 +2,11 @@ package v4
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mutemule/wowl/combat"
 	"github.com/mutemule/wowl/combatLog/event"
@@ -28,22 +30,15 @@ func Parse(s *bufio.Scanner) (encounters []combat.Encounter, err error) {
 			encounters = append(encounters, *new(combat.Encounter))
 			currentEncounter = &encounters[len(encounters)-1]
 
-			*currentEncounter, err = startEncounter(rawCombatEvent)
+			err = startEncounter(combatEventTime, combatRecords, currentEncounter)
 
 		case "ENCOUNTER_END":
-			if currentEncounter == nil || currentEncounter.ID == 0 {
-				log.Println("Found an ENCOUNTER_END event without a corresponding ENCOUNTER_START event, ignoring.")
-				log.Println(rawCombatEvent)
-			} else {
-				currentEncounter.End = combatEventTime
-				currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
-				currentEncounter.Kill, err = strconv.ParseBool(combatRecords[5])
-				if err != nil {
-					return encounters, err
-				}
-
-				currentEncounter = new(combat.Encounter)
+			err = endEncounter(combatEventTime, combatRecords, currentEncounter)
+			if err != nil {
+				return encounters, err
 			}
+			currentEncounter.Events = append(currentEncounter.Events, rawCombatEvent)
+			currentEncounter = new(combat.Encounter)
 
 		case "UNIT_DIED":
 			if currentEncounter != nil && currentEncounter.ID != 0 {
@@ -69,30 +64,38 @@ func Parse(s *bufio.Scanner) (encounters []combat.Encounter, err error) {
 	return encounters, err
 }
 
-func startEncounter(combatEvent string) (encounter combat.Encounter, err error) {
-	time, records, err := event.Split(combatEvent)
-
+func startEncounter(time time.Time, records []string, encounter *combat.Encounter) (err error) {
 	encounter.Start = time
+	encounter.Name = records[2]
 	encounter.Kill = false
-	encounter.Events = append(encounter.Events, combatEvent)
+	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
 
 	encounter.ID, err = strconv.Atoi(records[1])
 	if err != nil {
-		return encounter, err
+		return err
 	}
-
-	encounter.Name = records[2]
 
 	encounter.DifficultyID, err = strconv.Atoi(records[3])
 	if err != nil {
-		return encounter, err
+		return err
 	}
-	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
 
 	encounter.RaidSize, err = strconv.Atoi(records[4])
 	if err != nil {
-		return encounter, err
+		return err
 	}
 
-	return encounter, err
+	return nil
+}
+
+func endEncounter(time time.Time, records []string, encounter *combat.Encounter) (err error) {
+	if encounter == nil || encounter.ID == 0 {
+		err = fmt.Errorf("Found an ENCOUNTER_END event without a corresponding ENCOUNTER_START event, ignoring: %s", records)
+		return err
+	}
+
+	encounter.End = time
+	encounter.Kill, err = strconv.ParseBool(records[5])
+
+	return nil
 }
