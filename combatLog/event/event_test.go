@@ -20,7 +20,7 @@ func TestParsingEventDateStamp(t *testing.T) {
 
 func TestParsingOldDateStamp(t *testing.T) {
 	currentDate := time.Now().UTC()
-	expectedDate := time.Date(currentDate.Year()-1, 1, currentDate.Day()+7, 15, 02, 15, 348000000, time.UTC)
+	expectedDate := time.Date(currentDate.Year()-1, currentDate.Month(), currentDate.Day()+7, 15, 02, 15, 348000000, time.UTC)
 
 	dateString := fmt.Sprintf("%d/%d %02d:%02d:%02d.348",
 		int(expectedDate.Month()),
