@@ -2,6 +2,7 @@ package event
 
 import (
 	"encoding/csv"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,10 @@ func Split(s string) (dateStamp time.Time, events []string, err error) {
 	dateEvent := strings.SplitN(s, "  ", 2)
 	dateTime := dateEvent[0]
 
-	dateStamp, _ = parseDate(dateTime)
+	dateStamp, err = parseDate(dateTime)
+	if err != nil {
+		return dateStamp, events, err
+	}
 
 	r := csv.NewReader(strings.NewReader(dateEvent[1]))
 	r.LazyQuotes = true
@@ -28,15 +32,16 @@ func parseDate(s string) (combatEventDate time.Time, err error) {
 	currentYear := currentDate.Year()
 
 	combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(currentYear))
-	if err != nil {
-		return combatEventDate, err
+	if combatEventDate.Year() != currentYear {
+		err = fmt.Errorf("event: Failed to parse event date of '%s'", s)
 	}
 
 	if combatEventDate.After(currentDate) {
 		previousYear := currentYear - 1
 		combatEventDate, err = time.Parse(layout, s+" "+strconv.Itoa(previousYear))
-
-		return combatEventDate, err
+		if combatEventDate.Year() != previousYear {
+			err = fmt.Errorf("event: Failed to parse old event date of '%s'", s)
+		}
 	}
 
 	return combatEventDate, err

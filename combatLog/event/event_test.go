@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestParsingEventDateStamp(t *testing.T) {
+func TestParsingValidEventDateStamp(t *testing.T) {
 	dateString := "1/10 15:02:15.348"
 	expectedDate := time.Date(time.Now().Year(), 1, 10, 15, 02, 15, 348000000, time.UTC)
 
@@ -59,5 +59,15 @@ func TestParsingEmbeddedQuoteInCombatEvent(t *testing.T) {
 
 	if expectedNumberOfEvents != len(returnedEvents) {
 		t.Errorf("Event parsing failed: expected %d fields, but got %d.\n", expectedNumberOfEvents, len(returnedEvents))
+	}
+}
+
+func TestParsingInvalidEventDateStamp(t *testing.T) {
+	dateString := "1/10 15:02:15.348 1980"
+	header := dateString + "  COMBAT_LOG_VERSION,4,ADVANCED_LOG_ENABLED,1"
+	returnedDate, _, err := Split(header)
+
+	if err == nil {
+		t.Errorf("Successfully parsed event date with invalid year field: recieved date of '%s'", returnedDate)
 	}
 }
