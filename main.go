@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,24 +11,23 @@ import (
 	"github.com/mutemule/wowl/combatLog"
 )
 
-func main() {
-	combatLogFileName := "WoWCombatLog.txt"
-	// combatLogFileName := "C:/Program Files (x86)/World of Warcraft/Logs/warcraftlogsarchive/WoWCombatLog-archive-2018-01-22T06-33-42.964Z.txt"
-	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
+var combatLogFileName string
+var debug bool
 
+func init() {
+	flag.StringVar(&combatLogFileName, "combatlog", "C:/Program Files (x86)/World of Warcraft/Logs/WoWCombatLog.txt", "The WoW combat log to parse")
+	flag.BoolVar(&debug, "debug", false, "Enable debugging")
+}
+
+func main() {
+	flag.Parse()
+
+	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 	info, encounters, err := combatLog.Parse(combatLogFileName)
 
-	// if debug {
-	//   buffer := new(bytes.Buffer)
-	//   encoder := json.NewEncoder(buffer)
-	//   encoder.SetIndent("", "\t")
-
-	//   err = encoder.Encode(encounters)
-	//   if err != nil {
-	//  	log.Fatal(err)
-	//   }
-	//   fmt.Println(buffer.String())
-	// }
+	if debug {
+		fmt.Printf("DEBUG: Combat log file to parse: %s\n", combatLogFileName)
+	}
 
 	fh, err := os.Create(parsedCombatLogFileName)
 	if err != nil {
