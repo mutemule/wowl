@@ -1,0 +1,4 @@
+*.go  text
+*.log text
+*.md  text
+*.txt text
