@@ -2,6 +2,7 @@ package combatLog
 
 import (
 	"bufio"
+	"compress/gzip"
 	"fmt"
 	"log"
 	"os"
@@ -14,13 +15,11 @@ import (
 
 // Parse will parse the full combat log and return the appropriate metadata and encounters
 func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounter, err error) {
-	combatLogFileHandle, err := os.Open(combatLogFile)
+	scanner, err := openFile(combatLogFile)
 	if err != nil {
 		return info, encounters, err
 	}
-	defer combatLogFileHandle.Close()
 
-	scanner := bufio.NewScanner(combatLogFileHandle)
 	scanner.Split(bufio.ScanLines)
 	scanner.Scan()
 	combatTime, logHeaderFields, err := event.Split(scanner.Text())
@@ -79,4 +78,28 @@ func parseHeader(headerFields []string) (combatInfo combat.Info, err error) {
 	combatInfo.AdvancedLogging = advancedLogging
 
 	return combatInfo, nil
+}
+
+func openFile(filename string) (scanner *bufio.Scanner, err error) {
+	reader, err := os.Open(filename)
+	if err != nil {
+		return scanner, err
+	}
+	defer reader.Close()
+
+	bReader := bufio.NewReader(reader)
+	firstTwoBytes, err := bReader.Peek(2)
+
+	if firstTwoBytes[0] == 31 && firstTwoBytes[1] == 139 {
+		gzipReader, err := gzip.NewReader(bReader)
+		if err != nil {
+			return scanner, err
+		}
+
+		scanner = bufio.NewScanner(gzipReader)
+	} else {
+		scanner = bufio.NewScanner(bReader)
+	}
+
+	return scanner, err
 }

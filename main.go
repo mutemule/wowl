@@ -24,6 +24,9 @@ func main() {
 
 	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
 	info, encounters, err := combatLog.Parse(combatLogFileName)
+	if err != nil {
+		log.Fatalf("Failed to open combat log file: %s\n", err)
+	}
 
 	if debug {
 		fmt.Printf("DEBUG: Combat log file to parse: %s\n", combatLogFileName)

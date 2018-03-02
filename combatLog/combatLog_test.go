@@ -73,3 +73,13 @@ func TestParsingHeaderWithInvalidAdvancedLoggingString(t *testing.T) {
 		t.Error("Expected an error when evaluated an invalid log version field, but got success.")
 	}
 }
+
+func TestOpeningNonexistentFile(t *testing.T) {
+	bogusFileName := "nonexistent-file.bs"
+
+	_, err := openFile(bogusFileName)
+
+	if err == nil {
+		t.Errorf("Expected to fail when opening non-existent file %s, but we succeeded.", bogusFileName)
+	}
+}
