@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -95,8 +97,14 @@ func openFile(filename string) (scanner *bufio.Scanner, err error) {
 		if err != nil {
 			return scanner, err
 		}
+		defer gzipReader.Close()
 
-		scanner = bufio.NewScanner(gzipReader)
+		uncompressedFile, err := ioutil.TempFile(os.TempDir(), "wowl-WoWCombatLog")
+		defer os.Remove(uncompressedFile.Name())
+		_, err = io.Copy(uncompressedFile, gzipReader)
+		uncompressedFile.Seek(0, 0)
+
+		scanner = bufio.NewScanner(uncompressedFile)
 	} else {
 		scanner = bufio.NewScanner(bReader)
 	}

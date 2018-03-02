@@ -10,6 +10,9 @@ import (
 
 // Split takes a single combat log event and returns the datestampe along with a slice of event fields
 func Split(s string) (dateStamp time.Time, events []string, err error) {
+	if len(s) == 0 {
+		return dateStamp, events, err
+	}
 	dateEvent := strings.SplitN(s, "  ", 2)
 	dateTime := dateEvent[0]
 

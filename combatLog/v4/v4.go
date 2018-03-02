@@ -19,6 +19,11 @@ func Parse(s *bufio.Scanner) (encounters []combat.Encounter, err error) {
 
 	for s.Scan() {
 		rawCombatEvent := s.Text()
+		if len(rawCombatEvent) == 0 {
+			fmt.Printf("DEBUG: Found an empty combat event")
+			continue
+		}
+
 		combatEventTime, combatRecords, err := event.Split(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
