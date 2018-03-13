@@ -73,7 +73,6 @@ func startEncounter(time time.Time, records []string, encounter *combat.Encounte
 	encounter.Start = time
 	encounter.Name = records[2]
 	encounter.Kill = false
-	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
 
 	encounter.ID, err = strconv.Atoi(records[1])
 	if err != nil {
@@ -84,6 +83,7 @@ func startEncounter(time time.Time, records []string, encounter *combat.Encounte
 	if err != nil {
 		return err
 	}
+	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
 
 	encounter.RaidSize, err = strconv.Atoi(records[4])
 	if err != nil {
