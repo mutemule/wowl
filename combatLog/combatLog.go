@@ -56,9 +56,6 @@ func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, er
 		log.Fatalf("Unsupported combat log version '%d'", combatInfo.Version)
 	case 4:
 		encounters, err = v4.Parse(scanner)
-		if err != nil {
-			return info, encounters, err
-		}
 	}
 
 	return info, encounters, err
