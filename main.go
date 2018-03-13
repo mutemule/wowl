@@ -29,7 +29,7 @@ func main() {
 	}
 
 	if debug {
-		fmt.Printf("DEBUG: Combat log file to parse: %s\n", combatLogFileName)
+		log.Printf("DEBUG: Combat log file to parse: %s\n", combatLogFileName)
 	}
 
 	fh, err := os.Create(parsedCombatLogFileName)
