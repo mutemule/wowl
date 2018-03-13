@@ -1,12 +1,31 @@
 package combatLog
 
 import (
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/mutemule/wowl/combat"
 )
+
+// A simple integration test just to make sure things are working properly
+func TestParsingPlaintextLog(t *testing.T) {
+	logfile, _ := filepath.Abs("../test-data/WoWCombatLog-encounters.txt")
+	_, _, err := Parse(logfile)
+	if err != nil {
+		t.Errorf("Failed to parse '%s': %v\n", logfile, err)
+	}
+}
+
+// A simple integration test just to make sure things are working properly, for gzip'd logs
+func TestParsingGzipLog(t *testing.T) {
+	logfile, _ := filepath.Abs("../test-data/WoWCombatLog-encounters.txt.gz")
+	_, _, err := Parse(logfile)
+	if err != nil {
+		t.Errorf("Failed to parse '%s': %v\n", logfile, err)
+	}
+}
 
 func TestParsingValidHeader(t *testing.T) {
 	expectedHeader := combat.Info{
