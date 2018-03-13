@@ -92,3 +92,27 @@ func TestParsingHeaderWithInvalidAdvancedLoggingString(t *testing.T) {
 		t.Error("Expected an error when evaluated an invalid log version field, but got success.")
 	}
 }
+
+func TestParsingLogWithoutAdvancedLogging(t *testing.T) {
+	expectedHeader := combat.Info{
+		Time:            time.Now().UTC(),
+		Version:         4,
+		AdvancedLogging: true,
+		Header:          "",
+	}
+	header := make([]string, 4)
+	header[0] = "COMBAT_LOG_VERSION"
+	header[1] = strconv.Itoa(expectedHeader.Version)
+	header[2] = "ADVANCED_LOG_ENABLED"
+	header[3] = "0"
+
+	returnedHeader, err := parseHeader(header)
+
+	if err == nil {
+		t.Errorf("We are accepting a combat log without advanced logging: %v", returnedHeader)
+	}
+
+	if err.Error() != "advanced logging is not enabled" {
+		t.Errorf("Invalid error returned when advanced logging is not enabled: %v", err)
+	}
+}

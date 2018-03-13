@@ -46,11 +46,6 @@ func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, er
 	}
 	combatInfo.Time = combatTime
 
-	// The logs are only really useful if advanced logging is enabled
-	if combatInfo.AdvancedLogging == false {
-		log.Print("You need to enable advanced combat logging for full log usage.")
-	}
-
 	switch combatInfo.Version {
 	default:
 		log.Fatalf("Unsupported combat log version '%d'", combatInfo.Version)
@@ -80,7 +75,12 @@ func parseHeader(headerFields []string) (combatInfo combat.Info, err error) {
 	combatInfo.Version = version
 	combatInfo.AdvancedLogging = advancedLogging
 
-	return combatInfo, nil
+	// The logs are only really useful if advanced logging is enabled
+	if advancedLogging == false {
+		err = fmt.Errorf("advanced logging is not enabled")
+	}
+
+	return combatInfo, err
 }
 
 // getScanner takes an open file and returns an appropriate buffered scanner object for that file
