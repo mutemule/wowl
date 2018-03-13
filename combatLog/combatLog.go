@@ -16,20 +16,29 @@ import (
 )
 
 // Parse will parse the full combat log and return the appropriate metadata and encounters
-func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounter, err error) {
-	scanner, err := openFile(combatLogFile)
+func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, err error) {
+	fd, err := os.Open(fileName)
 	if err != nil {
+		return info, encounters, err
+	}
+	defer fd.Close()
+
+	scanner, err := getScanner(fd)
+	if err != nil {
+		log.Printf("Error: Failed to open the combat log file: %s\n", err)
 		return info, encounters, err
 	}
 
 	scanner.Split(bufio.ScanLines)
 	scanner.Scan()
+
+	// Obtain the combat log header and log start
 	combatTime, logHeaderFields, err := event.Split(scanner.Text())
 	if err != nil {
 		return info, encounters, err
 	}
 
-	// Obtain the combat log header
+	// Parse the combat log header
 	combatInfo, err := parseHeader(logHeaderFields)
 	if err != nil {
 		log.Printf("Failed to parse the combat log header '%s':", logHeaderFields)
@@ -37,20 +46,15 @@ func Parse(combatLogFile string) (info combat.Info, encounters []combat.Encounte
 	}
 	combatInfo.Time = combatTime
 
-	// Validate combat log version and configuration, should be its own function
-	if combatInfo.Version != 4 {
-		log.Fatalf("Unsupported combat log version: %d", combatInfo.Version)
-	}
-
 	// The logs are only really useful if advanced logging is enabled
 	if combatInfo.AdvancedLogging == false {
 		log.Print("You need to enable advanced combat logging for full log usage.")
 	}
 
 	switch combatInfo.Version {
+	default:
+		log.Fatalf("Unsupported combat log version '%d'", combatInfo.Version)
 	case 4:
-		// XXX: stop passing the scanner around and just parse individual events
-		// This will be more than a little tricky, but should be doable
 		encounters, err = v4.Parse(scanner)
 		if err != nil {
 			return info, encounters, err
@@ -82,14 +86,10 @@ func parseHeader(headerFields []string) (combatInfo combat.Info, err error) {
 	return combatInfo, nil
 }
 
-func openFile(filename string) (scanner *bufio.Scanner, err error) {
-	reader, err := os.Open(filename)
-	if err != nil {
-		return scanner, err
-	}
-	defer reader.Close()
-
-	bReader := bufio.NewReader(reader)
+// getScanner takes an open file and returns an appropriate buffered scanner object for that file
+// This allows us to easily add support for compressed files
+func getScanner(fd *os.File) (scanner *bufio.Scanner, err error) {
+	bReader := bufio.NewReader(fd)
 	firstTwoBytes, err := bReader.Peek(2)
 
 	if firstTwoBytes[0] == 31 && firstTwoBytes[1] == 139 {
@@ -99,6 +99,10 @@ func openFile(filename string) (scanner *bufio.Scanner, err error) {
 		}
 		defer gzipReader.Close()
 
+		// We explode the gzip file because the gzip reader sometimes returns partial lines
+		// So rather than track line states ourselves, it's easier to just use a temp file
+		// to handle all the log reading
+		// A little harder on disk and maybe memory, but considerably easier for us.
 		uncompressedFile, err := ioutil.TempFile(os.TempDir(), "wowl-WoWCombatLog")
 		defer os.Remove(uncompressedFile.Name())
 		_, err = io.Copy(uncompressedFile, gzipReader)
