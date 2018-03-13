@@ -109,15 +109,9 @@ func TestParsingHeaderWithInvalidAdvancedLoggingString(t *testing.T) {
 }
 
 func TestParsingLogWithoutAdvancedLogging(t *testing.T) {
-	expectedHeader := combat.Info{
-		Time:            time.Now().UTC(),
-		Version:         4,
-		AdvancedLogging: true,
-		Header:          "",
-	}
 	header := make([]string, 4)
 	header[0] = "COMBAT_LOG_VERSION"
-	header[1] = strconv.Itoa(expectedHeader.Version)
+	header[1] = "4"
 	header[2] = "ADVANCED_LOG_ENABLED"
 	header[3] = "0"
 
