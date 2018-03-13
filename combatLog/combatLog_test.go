@@ -1,6 +1,7 @@
 package combatLog
 
 import (
+	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -48,6 +49,20 @@ func TestParsingValidHeader(t *testing.T) {
 
 	if expectedHeader.AdvancedLogging != returnedHeader.AdvancedLogging {
 		t.Errorf("Header parsing failed: advanced logging should be %v, but got %v\n", expectedHeader.AdvancedLogging, returnedHeader.AdvancedLogging)
+	}
+}
+
+func TestParsingNonexistentLogfile(t *testing.T) {
+	_, _, err := Parse("nonexistant.txt")
+
+	if err == nil {
+		t.Errorf("Somehow parsing a nonexistent logfile succeeded.")
+	}
+
+	e, ok := err.(*os.PathError)
+
+	if !ok {
+		t.Errorf("We were expecting a PathError, but got '%v' instead.", e)
 	}
 }
 
