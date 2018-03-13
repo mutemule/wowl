@@ -71,3 +71,12 @@ func TestParsingInvalidEventDateStamp(t *testing.T) {
 		t.Errorf("Successfully parsed event date with invalid year field: recieved date of '%s'", returnedDate)
 	}
 }
+
+func TestParsingEmptyEvent(t *testing.T) {
+	eventString := ""
+	datestamp, events, err := Split(eventString)
+
+	if err == nil {
+		t.Errorf("We somehow managed to parse an empty event: %s: %+v", datestamp, events)
+	}
+}
