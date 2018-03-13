@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -44,10 +43,11 @@ func main() {
 		log.Printf("Failed to write combat log header: %s", err)
 	}
 
+	log.Printf("Found %d encounters total:\n", len(encounters))
 	for _, encounter := range encounters {
 		encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
 		encounterResult := killOrWipe(encounter.Kill)
-		fmt.Printf("%s %s: %s (%s) (%d deaths)\n", encounter.Difficulty, encounter.Name, encounterResult, encounterLength, len(encounter.Deaths))
+		log.Printf("%s %s: %s (%s) (%d deaths)\n", encounter.Difficulty, encounter.Name, encounterResult, encounterLength, len(encounter.Deaths))
 		// for _, death := range encounter.Deaths {
 		// 	relativeDeathTime := death.Time.Sub(encounter.Start).Round(1 * time.Second)
 		// 	fmt.Printf("  %s died at %s\n", death.Name, relativeDeathTime)
