@@ -14,16 +14,17 @@ type Info struct {
 
 // Fight is a generic representation for all battles, encounters, challenges, etc.
 type Fight struct {
-	ID           int         `json:"id"`
-	Name         string      `json:"name"`
-	Start        time.Time   `json:"start"`
-	End          time.Time   `json:"end"`
-	DifficultyID int         `json:"difficultyID"`
-	Difficulty   string      `json:"difficulty"`
-	RaidSize     int         `json:"raidSize"`
-	Kill         bool        `json:"kill"`
-	Deaths       []UnitDeath `json:"deaths"`
-	Events       []string    `json:"events"`
+	ID           int             `json:"id"`
+	Name         string          `json:"name"`
+	Start        time.Time       `json:"start"`
+	End          time.Time       `json:"end"`
+	DifficultyID int             `json:"difficultyID"`
+	Difficulty   string          `json:"difficulty"`
+	RaidSize     int             `json:"raidSize"`
+	Kill         bool            `json:"kill"`
+	Players      map[string]bool `json:"players"`
+	Deaths       []UnitDeath     `json:"deaths"`
+	Events       []string        `json:"events"`
 }
 
 // UnitDeath records which units died and when
