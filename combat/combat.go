@@ -12,8 +12,8 @@ type Info struct {
 	Header          string    `json:"header"`
 }
 
-// Encounter represents all the details about a given encounter
-type Encounter struct {
+// Fight is a generic representation for all battles, encounters, challenges, etc.
+type Fight struct {
 	ID           int         `json:"id"`
 	Name         string      `json:"name"`
 	Start        time.Time   `json:"start"`

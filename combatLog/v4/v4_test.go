@@ -13,7 +13,7 @@ func TestParsingValidCombatStart(t *testing.T) {
 	expectedRaidSize := 25
 	combatStartEvent := "1/21 20:43:48.614  ENCOUNTER_START,2064,\"Portal Keeper Hasabel\",17,25"
 
-	encounter := *new(combat.Encounter)
+	encounter := *new(combat.Fight)
 	combatEventTime, combatRecords, _ := event.Split(combatStartEvent)
 
 	err := startEncounter(combatEventTime, combatRecords, &encounter)
@@ -37,7 +37,7 @@ func TestParsingValidCombatEnd(t *testing.T) {
 
 	startTime, _, _ := event.Split(combatStartEvent)
 
-	encounter := *new(combat.Encounter)
+	encounter := *new(combat.Fight)
 	encounter.ID = 2076
 	encounter.Name = "Garothi Worldbreaker"
 	encounter.Start = startTime

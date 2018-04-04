@@ -15,18 +15,18 @@ import (
 	"github.com/mutemule/wowl/combatLog/v4"
 )
 
-// Parse will parse the full combat log and return the appropriate metadata and encounters
-func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, err error) {
+// Parse will parse the full combat log and return the appropriate metadata and fights
+func Parse(fileName string) (info combat.Info, fights []combat.Fight, err error) {
 	fd, err := os.Open(fileName)
 	if err != nil {
-		return info, encounters, err
+		return info, fights, err
 	}
 	defer fd.Close()
 
 	scanner, err := getScanner(fd)
 	if err != nil {
 		log.Printf("Error: Failed to open the combat log file: %s\n", err)
-		return info, encounters, err
+		return info, fights, err
 	}
 
 	scanner.Split(bufio.ScanLines)
@@ -35,7 +35,7 @@ func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, er
 	// Obtain the combat log header and log start
 	combatTime, logHeaderFields, err := event.Split(scanner.Text())
 	if err != nil {
-		return info, encounters, err
+		return info, fights, err
 	}
 
 	// Parse the combat log header
@@ -50,10 +50,10 @@ func Parse(fileName string) (info combat.Info, encounters []combat.Encounter, er
 	default:
 		log.Fatalf("Unsupported combat log version '%d'", combatInfo.Version)
 	case 4:
-		encounters, err = v4.Parse(scanner)
+		fights, err = v4.Parse(scanner)
 	}
 
-	return info, encounters, err
+	return info, fights, err
 }
 
 // parseHeader takes the slice of header events and returns a struct representing prased values
