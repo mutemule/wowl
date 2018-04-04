@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	parsedCombatLogFileName := "WoWCombatLogParsed.txt"
-	info, encounters, err := combatLog.Parse(combatLogFileName)
+	info, fights, err := combatLog.Parse(combatLogFileName)
 	if err != nil {
 		log.Fatalf("Failed to open combat log file: %s\n", err)
 	}
@@ -43,17 +43,17 @@ func main() {
 		log.Printf("Failed to write combat log header: %s", err)
 	}
 
-	log.Printf("Found %d encounters total:\n", len(encounters))
-	for _, encounter := range encounters {
-		encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
-		encounterResult := killOrWipe(encounter.Kill)
-		log.Printf("%s %s: %s (%s) (%d deaths)\n", encounter.Difficulty, encounter.Name, encounterResult, encounterLength, len(encounter.Deaths))
-		// for _, death := range encounter.Deaths {
-		// 	relativeDeathTime := death.Time.Sub(encounter.Start).Round(1 * time.Second)
+	log.Printf("Found %d fights total:\n", len(fights))
+	for _, fight := range fights {
+		fightLength := fight.End.Sub(fight.Start).Round(1 * time.Second)
+		fightResult := killOrWipe(fight.Kill)
+		log.Printf("%s %s: %s (%s) (%d deaths)\n", fight.Difficulty, fight.Name, fightResult, fightLength, len(fight.Deaths))
+		// for _, death := range fight.Deaths {
+		// 	relativeDeathTime := death.Time.Sub(fight.Start).Round(1 * time.Second)
 		// 	fmt.Printf("  %s died at %s\n", death.Name, relativeDeathTime)
 		// }
 
-		for _, event := range encounter.Events {
+		for _, event := range fight.Events {
 			_, err = w.WriteString(event + "\n")
 			if err != nil {
 				log.Printf("Failed to write combat event: %s", err)
