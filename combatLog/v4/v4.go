@@ -27,8 +27,10 @@ func Parse(s *bufio.Scanner) (fights []combat.Fight, err error) {
 
 		switch combatRecords[0] {
 		case "ENCOUNTER_START":
+			// XXX: We should probably be using a constructor here
 			fights = append(fights, *new(combat.Fight))
 			currentFight = &fights[len(fights)-1]
+			currentFight.Players = make(map[string]bool)
 
 			err = startEncounter(combatEventTime, combatRecords, currentFight)
 
@@ -57,6 +59,10 @@ func Parse(s *bufio.Scanner) (fights []combat.Fight, err error) {
 		}
 
 		if currentFight != nil && currentFight.ID != 0 {
+			if (strings.HasPrefix(combatRecords[1], "Player-")) && (combatRecords[0] != "COMBATANT_INFO") {
+				playerName := combatRecords[2]
+				currentFight.Players[playerName] = true
+			}
 			currentFight.Events = append(currentFight.Events, rawCombatEvent)
 		}
 	}

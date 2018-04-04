@@ -48,7 +48,7 @@ func main() {
 	for _, fight := range fights {
 		fightLength := fight.End.Sub(fight.Start).Round(1 * time.Second)
 		fightResult := killOrWipe(fight.Kill)
-		fmt.Printf("%s %s: %s (%s) (%d deaths)\n", fight.Difficulty, fight.Name, fightResult, fightLength, len(fight.Deaths))
+		fmt.Printf("%s %s: %s (%s) (%d players, %d deaths)\n", fight.Difficulty, fight.Name, fightResult, fightLength, len(fight.Players), len(fight.Deaths))
 		// for _, death := range fight.Deaths {
 		// 	relativeDeathTime := death.Time.Sub(fight.Start).Round(1 * time.Second)
 		// 	fmt.Printf("  %s died at %s\n", death.Name, relativeDeathTime)
