@@ -2,7 +2,7 @@ package v4
 
 import (
 	"bufio"
-	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -14,11 +14,18 @@ import (
 
 // Parse picks up after the combat log header to continue parsing the combat log
 // XXX: this needs to be broken down a bit more
-func Parse(s *bufio.Scanner) (fights []combat.Fight, err error) {
+func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 	var currentFight *combat.Fight
 
-	for s.Scan() {
-		rawCombatEvent := s.Text()
+	for {
+		rawCombatEvent, err := reader.ReadString('\n')
+		if err == io.EOF {
+			return fights, nil
+		}
+		if err != nil {
+			log.Fatalf("Unhandled error: %+v", err)
+		}
+
 		combatEventTime, combatRecords, err := event.Split(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
@@ -27,20 +34,12 @@ func Parse(s *bufio.Scanner) (fights []combat.Fight, err error) {
 
 		switch combatRecords[0] {
 		case "ENCOUNTER_START":
-			// XXX: We should probably be using a constructor here
-			fights = append(fights, *new(combat.Fight))
-			currentFight = &fights[len(fights)-1]
-			currentFight.Players = make(map[string]bool)
-
-			err = startEncounter(combatEventTime, combatRecords, currentFight)
-
-		case "ENCOUNTER_END":
-			err = endEncounter(combatEventTime, combatRecords, currentFight)
+			// err = startEncounter(combatEventTime, combatRecords, currentFight)
+			currentFight, err := handleEncounter(reader, rawCombatEvent)
+			fights = append(fights, currentFight)
 			if err != nil {
 				return fights, err
 			}
-			currentFight.Events = append(currentFight.Events, rawCombatEvent)
-			currentFight = new(combat.Fight)
 
 		case "UNIT_DIED":
 			if currentFight != nil && currentFight.ID != 0 {
@@ -70,38 +69,77 @@ func Parse(s *bufio.Scanner) (fights []combat.Fight, err error) {
 	return fights, err
 }
 
-func startEncounter(time time.Time, records []string, encounter *combat.Fight) (err error) {
-	encounter.Start = time
-	encounter.Name = records[2]
-	encounter.Kill = false
-
-	encounter.ID, err = strconv.Atoi(records[1])
+func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
+	fight.Players = make(map[string]bool)
+	initialEventTime, initialEventRecords, err := event.Split(initialEvent)
 	if err != nil {
-		return err
+		return fight, err
+	}
+	fight.Events = append(fight.Events, initialEvent)
+	fight.Start = initialEventTime
+	fight.Name = initialEventRecords[2]
+	fight.Kill = false
+
+	for fight.End == *new(time.Time) {
+		rawCombatEvent, err := reader.ReadString('\n')
+		if err == io.EOF {
+			log.Print("Ran out of log in the middle of an encounter. Returning what we've got...")
+			return fight, nil
+		}
+		if err != nil {
+			log.Fatalf("Error reading log: %+v", err)
+		}
+
+		fight.Events = append(fight.Events, rawCombatEvent)
+		combatEventTime, combatRecords, err := event.Split(rawCombatEvent)
+		if err != nil {
+			return fight, err
+		}
+
+		switch combatRecords[0] {
+		case "ENCOUNTER_END":
+			fight.Kill, err = strconv.ParseBool(combatRecords[5])
+			fight.End = combatEventTime
+
+		case "UNIT_DIED":
+			unitUUID := combatRecords[5]
+			unitName := combatRecords[6]
+
+			if strings.HasPrefix(unitUUID, "Player-") {
+				playerDeath := combat.UnitDeath{
+					Name: unitName,
+					Time: combatEventTime,
+				}
+
+				fight.Deaths = append(fight.Deaths, playerDeath)
+			}
+		}
+
+		// Record the player names in here
+		if (strings.HasPrefix(combatRecords[1], "Player-")) && (combatRecords[0] != "COMBATANT_INFO") {
+			playerName := combatRecords[2]
+			fight.Players[playerName] = true
+		}
+
+		// XXX: This is horrible hax that we only do because we can't seek in bufio,
+		// only in os.File.
+		// The datestamp is 17 bytes, followed by two spaces, for 19 bytes of garbage.
+		// We want to read in the subsequent 20 bytes and look for fixed strings that indicate
+		// some kind of logging snafu
+		readAhead, err := reader.Peek(39)
+		if err != nil {
+			readAheadEvent := string(readAhead[19:])
+			if strings.HasPrefix(readAheadEvent, "COMBAT_LOG_VERSION") {
+				log.Print("Re-started logging in the middle of an encounter; the game probably crashed. Doing our best to handle this...")
+				fight.End = combatEventTime
+			}
+
+			if strings.HasPrefix(readAheadEvent, "ENCOUNTER_START") {
+				log.Print("Attempted to start a new encounter while we're still in our existing one.")
+				fight.End = combatEventTime
+			}
+		}
 	}
 
-	encounter.DifficultyID, err = strconv.Atoi(records[3])
-	if err != nil {
-		return err
-	}
-	encounter.Difficulty = combat.Difficulty[encounter.DifficultyID]
-
-	encounter.RaidSize, err = strconv.Atoi(records[4])
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func endEncounter(time time.Time, records []string, encounter *combat.Fight) (err error) {
-	if encounter == nil || encounter.ID == 0 {
-		err = fmt.Errorf("Found an ENCOUNTER_END event without a corresponding ENCOUNTER_START event, ignoring: %s", records)
-		return err
-	}
-
-	encounter.End = time
-	encounter.Kill, err = strconv.ParseBool(records[5])
-
-	return nil
+	return fight, err
 }

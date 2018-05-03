@@ -1,60 +1,52 @@
 package v4
 
-import (
-	"testing"
-	"time"
+// func TestParsingValidCombatStart(t *testing.T) {
+// 	expectedEncounterName := "Portal Keeper Hasabel"
+// 	expectedRaidSize := 25
+// 	combatStartEvent := "1/21 20:43:48.614  ENCOUNTER_START,2064,\"Portal Keeper Hasabel\",17,25"
 
-	"github.com/mutemule/wowl/combat"
-	"github.com/mutemule/wowl/combatLog/event"
-)
+// 	encounter := *new(combat.Fight)
+// 	combatEventTime, combatRecords, _ := event.Split(combatStartEvent)
 
-func TestParsingValidCombatStart(t *testing.T) {
-	expectedEncounterName := "Portal Keeper Hasabel"
-	expectedRaidSize := 25
-	combatStartEvent := "1/21 20:43:48.614  ENCOUNTER_START,2064,\"Portal Keeper Hasabel\",17,25"
+// 	err := startEncounter(combatEventTime, combatRecords, &encounter)
+// 	if err != nil {
+// 		t.Errorf("Failed to parse a valid combat start event: %s", err)
+// 	}
 
-	encounter := *new(combat.Fight)
-	combatEventTime, combatRecords, _ := event.Split(combatStartEvent)
+// 	if expectedEncounterName != encounter.Name {
+// 		t.Errorf("Incorrect encounter name identified: expected '%s', got '%s'.", expectedEncounterName, encounter.Name)
+// 	}
 
-	err := startEncounter(combatEventTime, combatRecords, &encounter)
-	if err != nil {
-		t.Errorf("Failed to parse a valid combat start event: %s", err)
-	}
+// 	if expectedRaidSize != encounter.RaidSize {
+// 		t.Errorf("Incorrect encounter size identified: expeected %d, got %d.", expectedRaidSize, encounter.RaidSize)
+// 	}
+// }
 
-	if expectedEncounterName != encounter.Name {
-		t.Errorf("Incorrect encounter name identified: expected '%s', got '%s'.", expectedEncounterName, encounter.Name)
-	}
+// func TestParsingValidCombatEnd(t *testing.T) {
+// 	combatStartEvent := "1/30 15:36:24.208  ENCOUNTER_START,2076,\"Garothi Worldbreaker\",17,25"
+// 	combatEndEvent := "1/30 15:41:11.311  ENCOUNTER_END,2076,\"Garothi Worldbreaker\",17,25,1"
+// 	expectedEncounterLength := time.Duration(287) * time.Second
 
-	if expectedRaidSize != encounter.RaidSize {
-		t.Errorf("Incorrect encounter size identified: expeected %d, got %d.", expectedRaidSize, encounter.RaidSize)
-	}
-}
+// 	startTime, _, _ := event.Split(combatStartEvent)
 
-func TestParsingValidCombatEnd(t *testing.T) {
-	combatStartEvent := "1/30 15:36:24.208  ENCOUNTER_START,2076,\"Garothi Worldbreaker\",17,25"
-	combatEndEvent := "1/30 15:41:11.311  ENCOUNTER_END,2076,\"Garothi Worldbreaker\",17,25,1"
-	expectedEncounterLength := time.Duration(287) * time.Second
+// 	encounter := *new(combat.Fight)
+// 	encounter.ID = 2076
+// 	encounter.Name = "Garothi Worldbreaker"
+// 	encounter.Start = startTime
 
-	startTime, _, _ := event.Split(combatStartEvent)
+// 	endTime, endEvents, _ := event.Split(combatEndEvent)
 
-	encounter := *new(combat.Fight)
-	encounter.ID = 2076
-	encounter.Name = "Garothi Worldbreaker"
-	encounter.Start = startTime
+// 	err := endEncounter(endTime, endEvents, &encounter)
+// 	if err != nil {
+// 		t.Errorf("Failed to parse a valid combat end event: %s", err)
+// 	}
 
-	endTime, endEvents, _ := event.Split(combatEndEvent)
+// 	if !encounter.Kill {
+// 		t.Errorf("Failed to register a kill on combat end.")
+// 	}
 
-	err := endEncounter(endTime, endEvents, &encounter)
-	if err != nil {
-		t.Errorf("Failed to parse a valid combat end event: %s", err)
-	}
-
-	if !encounter.Kill {
-		t.Errorf("Failed to register a kill on combat end.")
-	}
-
-	encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
-	if expectedEncounterLength != encounterLength {
-		t.Errorf("Incorrect encounter length: expected %v, got %v.", expectedEncounterLength, encounterLength)
-	}
-}
+// 	encounterLength := encounter.End.Sub(encounter.Start).Round(1 * time.Second)
+// 	if expectedEncounterLength != encounterLength {
+// 		t.Errorf("Incorrect encounter length: expected %v, got %v.", expectedEncounterLength, encounterLength)
+// 	}
+// }

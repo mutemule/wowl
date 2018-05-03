@@ -23,17 +23,14 @@ func Parse(fileName string) (info combat.Info, fights []combat.Fight, err error)
 	}
 	defer fd.Close()
 
-	scanner, err := getScanner(fd)
-	if err != nil {
-		log.Printf("Error: Failed to open the combat log file: %s\n", err)
-		return info, fights, err
-	}
-
-	scanner.Split(bufio.ScanLines)
-	scanner.Scan()
+	reader, err := getReader(fd)
 
 	// Obtain the combat log header and log start
-	combatTime, logHeaderFields, err := event.Split(scanner.Text())
+	header, err := reader.ReadString('\n')
+	if err != nil {
+		return info, fights, err
+	}
+	combatTime, logHeaderFields, err := event.Split(header)
 	if err != nil {
 		return info, fights, err
 	}
@@ -50,7 +47,7 @@ func Parse(fileName string) (info combat.Info, fights []combat.Fight, err error)
 	default:
 		log.Fatalf("Unsupported combat log version '%d'", combatInfo.Version)
 	case 4:
-		fights, err = v4.Parse(scanner)
+		fights, err = v4.Parse(reader)
 	}
 
 	return info, fights, err
@@ -111,4 +108,34 @@ func getScanner(fd *os.File) (scanner *bufio.Scanner, err error) {
 	}
 
 	return scanner, err
+}
+
+// getReader returns a buffered IO reader for a given file
+// We do some shenanigans in here so we can support non-plaintext files
+// (namely, so we can compress older logfiles and still read them natively)
+// that are kind of ugly and should be cleaned up a bit.
+// Mostly, we should be able to return a reader for the compressed file directly,
+// rather than having to use an intermediary TempFile
+func getReader(fd *os.File) (reader *bufio.Reader, err error) {
+	bReader := bufio.NewReader(fd)
+	firstTwoBytes, err := bReader.Peek(2)
+
+	if firstTwoBytes[0] == 31 && firstTwoBytes[1] == 139 {
+		gzipReader, err := gzip.NewReader(bReader)
+		if err != nil {
+			return nil, err
+		}
+		defer gzipReader.Close()
+
+		uncompressedFile, err := ioutil.TempFile(os.TempDir(), "wowl-WoWCombatLog")
+		defer os.Remove(uncompressedFile.Name())
+		_, err = io.Copy(uncompressedFile, gzipReader)
+		uncompressedFile.Seek(0, 0)
+
+		reader = bufio.NewReader(uncompressedFile)
+	} else {
+		reader = bReader
+	}
+
+	return reader, err
 }
