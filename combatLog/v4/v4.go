@@ -2,6 +2,7 @@ package v4
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"strconv"
@@ -41,6 +42,13 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 				return fights, err
 			}
 
+		case "CHALLENGE_MODE_START":
+			currentFight, err := handleEncounter(reader, rawCombatEvent)
+			fights = append(fights, currentFight)
+			if err != nil {
+				return fights, err
+			}
+
 		case "UNIT_DIED":
 			if currentFight != nil && currentFight.ID != 0 {
 				unitUUID := combatRecords[5]
@@ -68,18 +76,7 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 }
 
 func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
-	fight.Players = make(map[string]bool)
-	initialEventTime, initialEventRecords, err := event.Split(initialEvent)
-	if err != nil {
-		return fight, err
-	}
-	fight.Events = append(fight.Events, initialEvent)
-	fight.Start = initialEventTime
-	fight.Name = initialEventRecords[2]
-	fight.Kill = false
-
-	// Don't need to have the terminating event provided if we know the initiating event...
-	terminatingEvent := combat.EventTerminators[initialEventRecords[0]]
+	fight, terminatingEvent, err := startFight(initialEvent)
 
 	for fight.End == *new(time.Time) {
 		rawCombatEvent, err := reader.ReadString('\n')
@@ -105,8 +102,8 @@ func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fi
 			}
 
 		case "CHALLENGE_MODE_END":
-			if terminatingEvent == "CHALLENGE_MODE_ENG" {
-				fight.Kill, err = strconv.ParseBool(combatRecords[1])
+			if terminatingEvent == "CHALLENGE_MODE_END" {
+				fight.Kill, err = strconv.ParseBool(combatRecords[2])
 				fight.End = combatEventTime
 			}
 
@@ -158,4 +155,34 @@ func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fi
 	}
 
 	return fight, err
+}
+
+func startFight(initialEvent string) (fight combat.Fight, terminatingEvent string, err error) {
+	fight.Players = make(map[string]bool)
+
+	eventTime, eventRecords, err := event.Split(initialEvent)
+	if err != nil {
+		return fight, terminatingEvent, err
+	}
+
+	fight.Events = append(fight.Events, initialEvent)
+	switch eventRecords[0] {
+	case "ENCOUNTER_START":
+		fight.Name = eventRecords[2]
+		// XXX: Handle errors in this properly
+		fight.DifficultyID, _ = strconv.Atoi(eventRecords[3])
+		fight.Difficulty = combat.EncounterDifficulty[fight.DifficultyID]
+
+	case "CHALLENGE_MODE_START":
+		fight.Name = eventRecords[1]
+		fight.DifficultyID, _ = strconv.Atoi(eventRecords[4])
+		fight.Difficulty = fmt.Sprintf("Mythic +%d", fight.DifficultyID)
+	}
+
+	fight.Start = eventTime
+	fight.Kill = false
+
+	terminatingEvent = combat.EventTerminators[eventRecords[0]]
+
+	return fight, terminatingEvent, err
 }

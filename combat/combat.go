@@ -33,8 +33,8 @@ type UnitDeath struct {
 	Name string    `json:"name"`
 }
 
-// Difficulty maps the numeric encounter difficulty to plain english
-var Difficulty = map[int]string{
+// EncounterDifficulty maps the numeric encounter difficulty to plain english
+var EncounterDifficulty = map[int]string{
 	0:  "None",
 	1:  "Regular Dungeon",
 	2:  "Heroic Dungeon",
