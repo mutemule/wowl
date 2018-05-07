@@ -65,8 +65,6 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 			currentFight.Events = append(currentFight.Events, rawCombatEvent)
 		}
 	}
-
-	return fights, err
 }
 
 func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
