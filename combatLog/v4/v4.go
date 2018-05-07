@@ -104,6 +104,11 @@ func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fi
 				fight.End = combatEventTime
 			}
 
+		case "CHALLENGE_MODE_END":
+			if terminatingEvent == "CHALLENGE_MODE_ENG" {
+				fight.End = combatEventTime
+			}
+
 		case "UNIT_DIED":
 			unitUUID := combatRecords[5]
 			unitName := combatRecords[6]
