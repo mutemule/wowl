@@ -27,55 +27,27 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 			log.Fatalf("Unhandled error: %+v", err)
 		}
 
-		combatEventTime, combatRecords, err := event.Split(rawCombatEvent)
+		_, combatRecords, err := event.Split(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
 			return fights, err
 		}
 
-		switch combatRecords[0] {
-		case "ENCOUNTER_START":
-			// err = startEncounter(combatEventTime, combatRecords, currentFight)
-			currentFight, err := handleEncounter(reader, rawCombatEvent)
+		if combat.EventTerminators[combatRecords[0]] != "" {
+			currentFight, err := handleFight(reader, rawCombatEvent)
 			fights = append(fights, currentFight)
 			if err != nil {
 				return fights, err
-			}
-
-		case "CHALLENGE_MODE_START":
-			currentFight, err := handleEncounter(reader, rawCombatEvent)
-			fights = append(fights, currentFight)
-			if err != nil {
-				return fights, err
-			}
-
-		case "UNIT_DIED":
-			if currentFight != nil && currentFight.ID != 0 {
-				unitUUID := combatRecords[5]
-				unitName := combatRecords[6]
-
-				if strings.HasPrefix(unitUUID, "Player-") {
-					playerDeath := combat.UnitDeath{
-						Name: unitName,
-						Time: combatEventTime,
-					}
-
-					currentFight.Deaths = append(currentFight.Deaths, playerDeath)
-				}
 			}
 		}
 
 		if currentFight != nil && currentFight.ID != 0 {
-			if (strings.HasPrefix(combatRecords[1], "Player-")) && (combatRecords[0] != "COMBATANT_INFO") {
-				playerName := combatRecords[2]
-				currentFight.Players[playerName] = true
-			}
 			currentFight.Events = append(currentFight.Events, rawCombatEvent)
 		}
 	}
 }
 
-func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
+func handleFight(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
 	fight, terminatingEvent, err := startFight(initialEvent)
 
 	for fight.End == *new(time.Time) {
