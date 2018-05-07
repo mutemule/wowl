@@ -71,3 +71,10 @@ var Difficulty = map[int]string{
 	33: "Timewalking",
 	34: "PvP",
 }
+
+// EventTerminators is a mapping of event initiators to their terminators,
+// to facilitate state tracking
+var EventTerminators = map[string]string{
+	"ENCOUNTER_START":      "ENCOUNTER_END",
+	"CHALLENGE_MODE_START": "CHALLENGE_MODE_END",
+}

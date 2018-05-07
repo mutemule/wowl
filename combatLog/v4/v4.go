@@ -35,7 +35,7 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 		switch combatRecords[0] {
 		case "ENCOUNTER_START":
 			// err = startEncounter(combatEventTime, combatRecords, currentFight)
-			currentFight, err := handleEncounter(reader, rawCombatEvent, "ENCOUNTER_END")
+			currentFight, err := handleEncounter(reader, rawCombatEvent)
 			fights = append(fights, currentFight)
 			if err != nil {
 				return fights, err
@@ -67,7 +67,7 @@ func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
 	}
 }
 
-func handleEncounter(reader *bufio.Reader, initialEvent string, terminatingEvent string) (fight combat.Fight, err error) {
+func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fight, err error) {
 	fight.Players = make(map[string]bool)
 	initialEventTime, initialEventRecords, err := event.Split(initialEvent)
 	if err != nil {
@@ -77,6 +77,9 @@ func handleEncounter(reader *bufio.Reader, initialEvent string, terminatingEvent
 	fight.Start = initialEventTime
 	fight.Name = initialEventRecords[2]
 	fight.Kill = false
+
+	// Don't need to have the terminating event provided if we know the initiating event...
+	terminatingEvent := combat.EventTerminators[initialEventRecords[0]]
 
 	for fight.End == *new(time.Time) {
 		rawCombatEvent, err := reader.ReadString('\n')
