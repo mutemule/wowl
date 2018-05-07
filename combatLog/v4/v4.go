@@ -128,15 +128,22 @@ func handleEncounter(reader *bufio.Reader, initialEvent string, terminatingEvent
 		// some kind of logging snafu
 		readAhead, err := reader.Peek(39)
 		if err != nil {
-			readAheadEvent := string(readAhead[19:])
-			if strings.HasPrefix(readAheadEvent, "COMBAT_LOG_VERSION") {
+			// If we didn't get a full timestamp in the peek, there's no point in continuing
+			// This technically leaves a bug if we read 17 or 18 bytes, but that should be handled elsewhere
+			if len(readAhead) < 17 {
 				log.Print("Re-started logging in the middle of an encounter; the game probably crashed. Doing our best to handle this...")
 				fight.End = combatEventTime
-			}
+			} else {
+				readAheadEvent := string(readAhead[19:])
+				if strings.HasPrefix(readAheadEvent, "COMBAT_LOG_VERSION") {
+					log.Print("Re-started logging in the middle of an encounter; the game probably crashed. Doing our best to handle this...")
+					fight.End = combatEventTime
+				}
 
-			if strings.HasPrefix(readAheadEvent, "ENCOUNTER_START") {
-				log.Print("Attempted to start a new encounter while we're still in our existing one.")
-				fight.End = combatEventTime
+				if strings.HasPrefix(readAheadEvent, "ENCOUNTER_START") {
+					log.Print("Attempted to start a new encounter while we're still in our existing one.")
+					fight.End = combatEventTime
+				}
 			}
 		}
 	}
