@@ -106,6 +106,7 @@ func handleEncounter(reader *bufio.Reader, initialEvent string) (fight combat.Fi
 
 		case "CHALLENGE_MODE_END":
 			if terminatingEvent == "CHALLENGE_MODE_ENG" {
+				fight.Kill, err = strconv.ParseBool(combatRecords[1])
 				fight.End = combatEventTime
 			}
 
