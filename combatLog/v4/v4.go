@@ -16,34 +16,51 @@ import (
 // Parse picks up after the combat log header to continue parsing the combat log
 // XXX: this needs to be broken down a bit more
 func Parse(reader *bufio.Reader) (fights []combat.Fight, err error) {
-	var currentFight *combat.Fight
+	var trash *combat.Fight
 
 	for {
 		rawCombatEvent, err := reader.ReadString('\n')
 		if err == io.EOF {
+			if len(trash.Events) > 0 {
+				fights = append(fights, *trash)
+			}
+
 			return fights, nil
 		}
 		if err != nil {
 			log.Fatalf("Unhandled error: %+v", err)
 		}
 
-		_, combatRecords, err := event.Split(rawCombatEvent)
+		combatTime, combatRecords, err := event.Split(rawCombatEvent)
 		if err != nil {
 			log.Printf("Failed to parse line '%s':\n", rawCombatEvent)
 			return fights, err
 		}
 
+		// If this combat event starts a new boss, dungeon, etc., then handle that as a new fight
+		// Otherwise, this is trash, so treat it as such.
 		if combat.EventTerminators[combatRecords[0]] != "" {
-			currentFight, err := handleFight(reader, rawCombatEvent)
-			fights = append(fights, currentFight)
+			fights = append(fights, *trash)
+
+			newFight, err := handleFight(reader, rawCombatEvent)
+			fights = append(fights, newFight)
 			if err != nil {
 				return fights, err
 			}
+
+			trash = new(combat.Fight)
+
+			continue
 		}
 
-		if currentFight != nil && currentFight.ID != 0 {
-			currentFight.Events = append(currentFight.Events, rawCombatEvent)
+		if trash == nil || trash.Name == "" || combatRecords[0] == "COMBAT_LOG_VERSION" {
+			trashFight, _, _ := startFight(rawCombatEvent)
+			trash = &trashFight
+
 		}
+
+		trash.Events = append(trash.Events, rawCombatEvent)
+		trash.End = combatTime
 	}
 }
 
@@ -130,14 +147,17 @@ func handleFight(reader *bufio.Reader, initialEvent string) (fight combat.Fight,
 }
 
 func startFight(initialEvent string) (fight combat.Fight, terminatingEvent string, err error) {
-	fight.Players = make(map[string]bool)
-
 	eventTime, eventRecords, err := event.Split(initialEvent)
 	if err != nil {
 		return fight, terminatingEvent, err
 	}
 
+	fight.Players = make(map[string]bool)
+	fight.Start = eventTime
+	fight.Kill = false
+
 	fight.Events = append(fight.Events, initialEvent)
+
 	switch eventRecords[0] {
 	case "ENCOUNTER_START":
 		fight.Name = eventRecords[2]
@@ -149,10 +169,13 @@ func startFight(initialEvent string) (fight combat.Fight, terminatingEvent strin
 		fight.Name = eventRecords[1]
 		fight.DifficultyID, _ = strconv.Atoi(eventRecords[4])
 		fight.Difficulty = fmt.Sprintf("Mythic +%d", fight.DifficultyID)
-	}
 
-	fight.Start = eventTime
-	fight.Kill = false
+	default:
+		fight.Name = "Trash"
+		fight.DifficultyID = 0
+		fight.Difficulty = ""
+		fight.Kill = true
+	}
 
 	terminatingEvent = combat.EventTerminators[eventRecords[0]]
 
